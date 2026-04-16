@@ -24,7 +24,7 @@ public abstract class BaseEntity {
 
     // 레코드 생성자 (username)
     @CreatedBy
-    @Column(name = "created_by", length = 100)
+    @Column(name = "created_by", nullable = false, length = 100)
     private String createdBy;
 
     // 레코드 수정 시간
