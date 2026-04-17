@@ -46,4 +46,12 @@ public class Address extends BaseEntity {
         this.zipCode = zipCode;
         this.isDefault = isDefault;
     }
+
+    public void update(String alias, String address, String detail, String zipCode, boolean isDefault) {
+        this.alias = alias;
+        this.address = address;
+        this.detail = detail;
+        this.zipCode = zipCode;
+        this.isDefault = isDefault;
+    }
 }

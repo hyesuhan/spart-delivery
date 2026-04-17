@@ -8,7 +8,7 @@ public class AddressException extends AppException {
         super(errorCode);
     }
 
-    public AddressException(ErrorCode errorCode, String message) {
+    public AddressException(AddressErrorCode errorCode, String message) {
         super(errorCode, message);
     }
 }

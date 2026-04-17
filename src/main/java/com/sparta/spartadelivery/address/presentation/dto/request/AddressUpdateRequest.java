@@ -8,6 +8,7 @@ public record AddressUpdateRequest(
         @NotBlank(message = "주소는 필수 입력사항 입니다.")
         String address,
         String detail,
-        String zipCode
+        String zipCode,
+        boolean isDefault;
 ) {
 }
