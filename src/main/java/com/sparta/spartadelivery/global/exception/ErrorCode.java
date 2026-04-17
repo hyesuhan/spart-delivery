@@ -1,10 +1,11 @@
 package com.sparta.spartadelivery.global.exception;
 
+import com.sparta.spartadelivery.global.exception.code.BaseErrorCode;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 @Getter
-public enum ErrorCode {
+public enum ErrorCode implements BaseErrorCode {
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR"),
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "INVALID_REQUEST"),
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS"),

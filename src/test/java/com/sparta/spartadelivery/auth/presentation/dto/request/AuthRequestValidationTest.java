@@ -34,7 +34,7 @@ class AuthRequestValidationTest {
     @DisplayName("회원가입 요청이 입력 조건을 만족하지 않으면 필드별 검증 메시지를 반환한다")
     void invalidSignupRequest() {
         ReqSignupDto request = new ReqSignupDto(
-                "usr",
+                "u",
                 "password",
                 "",
                 "invalid-email",
@@ -46,7 +46,7 @@ class AuthRequestValidationTest {
                 .collect(Collectors.toSet());
 
         assertThat(messages).contains(
-                "username: 사용자 ID는 4~10자여야 합니다.",
+                "username: 사용자 이름은 2~10자여야 합니다.",
                 "password: 비밀번호는 8~15자의 영문 대소문자, 숫자, 특수문자를 모두 포함해야 합니다.",
                 "nickname: 닉네임은 필수입니다.",
                 "email: 이메일 형식이 올바르지 않습니다.",

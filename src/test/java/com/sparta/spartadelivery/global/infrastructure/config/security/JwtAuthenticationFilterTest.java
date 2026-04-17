@@ -29,6 +29,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class JwtAuthenticationFilterTest {
@@ -72,7 +73,7 @@ class JwtAuthenticationFilterTest {
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer valid-token");
         MockHttpServletResponse response = new MockHttpServletResponse();
         CountingFilterChain filterChain = new CountingFilterChain();
-        UserEntity user = createUser("customer", Role.CUSTOMER);
+        UserEntity user = createUser(1L, "customer", Role.CUSTOMER);
 
         when(jwtTokenProvider.getPayload("valid-token"))
                 .thenReturn(new JwtTokenProvider.TokenPayload(1L, "customer", Role.CUSTOMER));
@@ -84,7 +85,10 @@ class JwtAuthenticationFilterTest {
         assertThat(filterChain.isCalled()).isTrue();
         assertThat(authentication).isNotNull();
         assertThat(authentication.getPrincipal()).isInstanceOf(UserPrincipal.class);
-        assertThat(((UserPrincipal) authentication.getPrincipal()).getAccountName()).isEqualTo("customer");
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        assertThat(principal.getId()).isEqualTo(1L);
+        assertThat(principal.getAccountName()).isEqualTo("customer");
+        assertThat(principal.getRole()).isEqualTo(Role.CUSTOMER);
         verifyNoInteractions(errorResponder);
     }
 
@@ -118,9 +122,33 @@ class JwtAuthenticationFilterTest {
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer stale-token");
         MockHttpServletResponse response = new MockHttpServletResponse();
         CountingFilterChain filterChain = new CountingFilterChain();
-        UserEntity user = createUser("changed", Role.CUSTOMER);
+        UserEntity user = createUser(1L, "changed", Role.CUSTOMER);
 
         when(jwtTokenProvider.getPayload("stale-token"))
+                .thenReturn(new JwtTokenProvider.TokenPayload(1L, "customer", Role.CUSTOMER));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
+
+        jwtAuthenticationFilter.doFilter(request, response, filterChain);
+
+        assertThat(filterChain.isCalled()).isFalse();
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(errorResponder).write(
+                response,
+                ErrorCode.ROLE_REVALIDATION_FAILED.getStatus().value(),
+                ErrorCode.ROLE_REVALIDATION_FAILED.getMessage()
+        );
+    }
+
+    @Test
+    @DisplayName("토큰 권한이 현재 사용자 권한과 다르면 인증 정보를 비우고 오류 응답을 작성한다")
+    void rejectWhenTokenRoleChanged() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer stale-role-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        CountingFilterChain filterChain = new CountingFilterChain();
+        UserEntity user = createUser(1L, "customer", Role.OWNER);
+
+        when(jwtTokenProvider.getPayload("stale-role-token"))
                 .thenReturn(new JwtTokenProvider.TokenPayload(1L, "customer", Role.CUSTOMER));
         when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(user));
 
@@ -157,8 +185,8 @@ class JwtAuthenticationFilterTest {
         );
     }
 
-    private UserEntity createUser(String username, Role role) {
-        return UserEntity.builder()
+    private UserEntity createUser(Long id, String username, Role role) {
+        UserEntity user = UserEntity.builder()
                 .username(username)
                 .nickname("nickname")
                 .email(username + "@example.com")
@@ -166,6 +194,8 @@ class JwtAuthenticationFilterTest {
                 .role(role)
                 .isPublic(true)
                 .build();
+        ReflectionTestUtils.setField(user, "id", id);
+        return user;
     }
 
     private static class CountingFilterChain implements FilterChain {

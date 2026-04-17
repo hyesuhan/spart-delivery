@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.5.13'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'jacoco'
 }
 
 group = 'com.sparta'
@@ -50,4 +51,19 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    // 테스트는 CI와 로컬 환경 모두에서 외부 PostgreSQL 없이 H2 기반 test 프로필로 실행한다.
+    systemProperty 'spring.profiles.active', 'test'
+    // 테스트 실행 후 Codecov 업로드와 로컬 확인에 사용할 JaCoCo 리포트를 생성한다.
+    finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+    dependsOn test
+
+    reports {
+        // XML은 CI/Codecov 업로드용, HTML은 개발자가 로컬에서 확인하는 용도다.
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
 }

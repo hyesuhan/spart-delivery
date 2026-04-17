@@ -28,6 +28,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -51,7 +52,6 @@ class AuthServiceTest {
     @DisplayName("회원가입 시 비밀번호를 암호화하고 사용자 정보를 저장한다")
     void signup() {
         ReqSignupDto request = signupRequest();
-        when(userRepository.existsByUsername("user01")).thenReturn(false);
         when(userRepository.existsByEmail("user01@example.com")).thenReturn(false);
         when(passwordEncoder.encode("Password1!")).thenReturn("encoded-password");
         when(userRepository.save(any(UserEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -62,34 +62,22 @@ class AuthServiceTest {
         verify(userRepository).save(userCaptor.capture());
         UserEntity savedUser = userCaptor.getValue();
         assertThat(savedUser.getUsername()).isEqualTo("user01");
+        assertThat(savedUser.getNickname()).isEqualTo("유저01");
+        assertThat(savedUser.getEmail()).isEqualTo("user01@example.com");
         assertThat(savedUser.getPassword()).isEqualTo("encoded-password");
         assertThat(savedUser.getPassword()).isNotEqualTo("Password1!");
+        assertThat(savedUser.getRole()).isEqualTo(Role.CUSTOMER);
+        assertThat(savedUser.isPublic()).isTrue();
         assertThat(response.username()).isEqualTo("user01");
+        assertThat(response.nickname()).isEqualTo("유저01");
         assertThat(response.email()).isEqualTo("user01@example.com");
         assertThat(response.role()).isEqualTo(Role.CUSTOMER);
-    }
-
-    @Test
-    @DisplayName("이미 사용 중인 사용자 ID이면 회원가입을 거부한다")
-    void signupWithDuplicateUsername() {
-        ReqSignupDto request = signupRequest();
-        when(userRepository.existsByUsername("user01")).thenReturn(true);
-
-        assertThatThrownBy(() -> authService.signup(request))
-                .isInstanceOf(AppException.class)
-                .extracting("errorCode")
-                .isEqualTo(ErrorCode.DUPLICATE_USERNAME);
-
-        verify(userRepository, never()).existsByEmail(any());
-        verify(passwordEncoder, never()).encode(any());
-        verify(userRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("이미 사용 중인 이메일이면 회원가입을 거부한다")
     void signupWithDuplicateEmail() {
         ReqSignupDto request = signupRequest();
-        when(userRepository.existsByUsername("user01")).thenReturn(false);
         when(userRepository.existsByEmail("user01@example.com")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.signup(request))
@@ -105,7 +93,7 @@ class AuthServiceTest {
     @DisplayName("로그인 성공 시 인증 후 JWT access token을 발급한다")
     void login() {
         ReqLoginDto request = new ReqLoginDto("user01@example.com", "Password1!");
-        UserEntity user = createUser("user01", "user01@example.com", Role.CUSTOMER);
+        UserEntity user = createUser(1L, "user01", "user01@example.com", Role.CUSTOMER);
         when(userRepository.findByEmailAndDeletedAtIsNull("user01@example.com")).thenReturn(Optional.of(user));
         when(jwtTokenProvider.generateAccessToken(any(UserPrincipal.class))).thenReturn("access-token");
 
@@ -114,6 +102,13 @@ class AuthServiceTest {
         verify(authenticationManager).authenticate(
                 new UsernamePasswordAuthenticationToken("user01@example.com", "Password1!")
         );
+        ArgumentCaptor<UserPrincipal> principalCaptor = ArgumentCaptor.forClass(UserPrincipal.class);
+        verify(jwtTokenProvider).generateAccessToken(principalCaptor.capture());
+        UserPrincipal principal = principalCaptor.getValue();
+        assertThat(principal.getId()).isEqualTo(1L);
+        assertThat(principal.getAccountName()).isEqualTo("user01");
+        assertThat(principal.getUsername()).isEqualTo("user01@example.com");
+        assertThat(principal.getRole()).isEqualTo(Role.CUSTOMER);
         assertThat(response.accessToken()).isEqualTo("access-token");
         assertThat(response.username()).isEqualTo("user01");
         assertThat(response.role()).isEqualTo(Role.CUSTOMER);
@@ -135,6 +130,23 @@ class AuthServiceTest {
         verify(jwtTokenProvider, never()).generateAccessToken(any());
     }
 
+    @Test
+    @DisplayName("인증은 성공했지만 사용자를 찾을 수 없으면 로그인을 거부한다")
+    void loginWithMissingUser() {
+        ReqLoginDto request = new ReqLoginDto("user01@example.com", "Password1!");
+        when(userRepository.findByEmailAndDeletedAtIsNull("user01@example.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.USER_NOT_FOUND);
+
+        verify(authenticationManager).authenticate(
+                new UsernamePasswordAuthenticationToken("user01@example.com", "Password1!")
+        );
+        verify(jwtTokenProvider, never()).generateAccessToken(any());
+    }
+
     private ReqSignupDto signupRequest() {
         return new ReqSignupDto(
                 "user01",
@@ -145,8 +157,8 @@ class AuthServiceTest {
         );
     }
 
-    private UserEntity createUser(String username, String email, Role role) {
-        return UserEntity.builder()
+    private UserEntity createUser(Long id, String username, String email, Role role) {
+        UserEntity user = UserEntity.builder()
                 .username(username)
                 .nickname("유저01")
                 .email(email)
@@ -154,5 +166,7 @@ class AuthServiceTest {
                 .role(role)
                 .isPublic(true)
                 .build();
+        ReflectionTestUtils.setField(user, "id", id);
+        return user;
     }
 }

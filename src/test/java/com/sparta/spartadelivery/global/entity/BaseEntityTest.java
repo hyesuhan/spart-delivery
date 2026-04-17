@@ -61,17 +61,18 @@ class BaseEntityTest {
 
     @Test
     @DisplayName("엔티티 수정 시 수정 시간이 갱신된다")
-    void update() {
+    void update() throws InterruptedException {
         setAuthentication(TEST_AUDITOR);
         BaseEntityTestEntity savedEntity = repository.saveAndFlush(new BaseEntityTestEntity("before-name"));
         var createdAt = savedEntity.getCreatedAt();
         var beforeUpdatedAt = savedEntity.getUpdatedAt();
 
+        Thread.sleep(10);
         savedEntity.updateName("after-name");
         BaseEntityTestEntity updatedEntity = repository.saveAndFlush(savedEntity);
 
         assertThat(updatedEntity.getCreatedAt()).isEqualTo(createdAt);
-        assertThat(updatedEntity.getUpdatedAt()).isAfterOrEqualTo(beforeUpdatedAt);
+        assertThat(updatedEntity.getUpdatedAt()).isAfter(beforeUpdatedAt);
         assertThat(updatedEntity.getUpdatedBy()).isEqualTo(TEST_AUDITOR);
     }
 
