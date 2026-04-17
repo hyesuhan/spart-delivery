@@ -3,6 +3,7 @@ package com.sparta.spartadelivery.global.infrastructure.config;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
@@ -25,7 +26,9 @@ public class OpenApiConfig {
                         .addSecuritySchemes(JWT_SECURITY_SCHEME_NAME, new SecurityScheme()
                                 .type(SecurityScheme.Type.HTTP)
                                 .scheme("bearer")
-                                .bearerFormat("JWT")));
+                                .bearerFormat("JWT")))
+                // 회원가입/로그인을 제외한 대부분의 API가 인증을 요구하므로 JWT 인증을 전역 기본값으로 둔다.
+                .addSecurityItem(new SecurityRequirement().addList(JWT_SECURITY_SCHEME_NAME));
     }
 
     @Bean
