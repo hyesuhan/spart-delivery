@@ -55,6 +55,8 @@ public class SecurityConfig {
 
                 // 회원가입과 로그인은 토큰 발급 전 요청이므로 열어두고, 나머지 API는 인증된 사용자만 접근하게 한다.
                 .authorizeHttpRequests(authorize -> authorize
+                        // API 문서는 인증 전에도 확인할 수 있어야 하므로 Swagger UI와 OpenAPI JSON 경로는 열어둔다.
+                        .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/signup", "/api/v1/auth/login").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
