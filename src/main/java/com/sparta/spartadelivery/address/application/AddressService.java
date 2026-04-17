@@ -73,6 +73,17 @@ public class AddressService {
         address.markDeleted(user.getUsername());
     }
 
+    @Transactional
+    public void setDefaultAddress(UUID addressId, Long userId) throws AccessDeniedException {
+        UserEntity user = getUser(userId);
+
+        Address address = findAndValidateAddress(addressId, user);
+
+        addressRepository.resetDefaultByUserId(user.getUsername());
+
+        address.assignDefault();
+    }
+
 
     // private methods
     private UserEntity getUser(Long id) {

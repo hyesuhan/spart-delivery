@@ -54,4 +54,8 @@ public class Address extends BaseEntity {
         this.zipCode = zipCode;
         this.isDefault = isDefault;
     }
+
+    public void setAsDefault() {
+        this.isDefault = true;
+    }
 }
