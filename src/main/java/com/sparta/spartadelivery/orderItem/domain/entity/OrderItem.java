@@ -13,6 +13,7 @@ import java.util.UUID;
 
 @Getter
 @Table(name = "p_order_item")
+@Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OrderItem {
 
