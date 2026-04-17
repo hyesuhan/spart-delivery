@@ -1,6 +1,7 @@
 package com.sparta.spartadelivery.order.domain.entity;
 
 import com.sparta.spartadelivery.global.entity.BaseEntity;
+import com.sparta.spartadelivery.user.domain.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -19,12 +20,11 @@ public class Order extends BaseEntity {
     @Column(name = "order_id")
     private UUID id;
 
-    /*
     // 주문자 (N : 1)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private UserEntity customer;
-     */
+
 
     /*
     // 주문 가게 (N : 1)
