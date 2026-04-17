@@ -51,6 +51,8 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    // 테스트는 CI와 로컬 환경 모두에서 외부 PostgreSQL 없이 H2 기반 test 프로필로 실행한다.
+    systemProperty 'spring.profiles.active', 'test'
     // 테스트 실행 후 Codecov 업로드와 로컬 확인에 사용할 JaCoCo 리포트를 생성한다.
     finalizedBy jacocoTestReport
 }
