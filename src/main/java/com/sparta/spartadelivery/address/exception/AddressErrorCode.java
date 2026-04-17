@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 public enum AddressErrorCode {
 
     ADDRESS_NOT_FOUND(HttpStatus.NOT_FOUND, "ADDRESS_NOT_FOUND"),
+    ADDRESS_
 
 
     private final HttpStatus status;
