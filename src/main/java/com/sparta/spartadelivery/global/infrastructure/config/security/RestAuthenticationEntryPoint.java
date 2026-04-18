@@ -1,6 +1,6 @@
 package com.sparta.spartadelivery.global.infrastructure.config.security;
 
-import com.sparta.spartadelivery.global.exception.ErrorCode;
+import com.sparta.spartadelivery.auth.exception.AuthErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -28,8 +28,8 @@ public class RestAuthenticationEntryPoint implements org.springframework.securit
         // 인증 실패는 클라이언트가 다시 로그인하거나 유효한 토큰을 보내야 하는 상황으로 처리한다.
         errorResponder.write(
                 response,
-                ErrorCode.INVALID_TOKEN.getStatus().value(),
-                ErrorCode.INVALID_TOKEN.getMessage()
+                AuthErrorCode.INVALID_TOKEN.getStatus().value(),
+                AuthErrorCode.INVALID_TOKEN.getMessage()
         );
     }
 }

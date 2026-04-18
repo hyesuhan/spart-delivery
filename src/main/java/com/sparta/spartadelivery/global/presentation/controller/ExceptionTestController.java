@@ -1,7 +1,7 @@
 package com.sparta.spartadelivery.global.presentation.controller;
 
 import com.sparta.spartadelivery.global.exception.AppException;
-import com.sparta.spartadelivery.global.exception.ErrorCode;
+import com.sparta.spartadelivery.global.exception.GlobalErrorCode;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,7 +16,7 @@ public class ExceptionTestController {
 
     @GetMapping("/app")
     public void appException() {
-        throw new AppException(ErrorCode.INVALID_REQUEST, "AppException test");
+        throw new AppException(GlobalErrorCode.INVALID_REQUEST, "AppException test");
     }
 
     @GetMapping("/runtime")

@@ -1,4 +1,4 @@
-package com.sparta.spartadelivery.global.exception.code;
+package com.sparta.spartadelivery.global.exception;
 
 import org.springframework.http.HttpStatus;
 

@@ -3,7 +3,8 @@ package com.sparta.spartadelivery.global.infrastructure.config.security;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sparta.spartadelivery.global.exception.ErrorCode;
+import com.sparta.spartadelivery.auth.exception.AuthErrorCode;
+import com.sparta.spartadelivery.global.exception.GlobalErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -28,9 +29,9 @@ class SecurityExceptionHandlerTest {
         authenticationEntryPoint.commence(request, response, new BadCredentialsException("invalid"));
         var responseBody = objectMapper.readTree(response.getContentAsString());
 
-        assertThat(response.getStatus()).isEqualTo(ErrorCode.INVALID_TOKEN.getStatus().value());
-        assertThat(responseBody.get("status").asInt()).isEqualTo(ErrorCode.INVALID_TOKEN.getStatus().value());
-        assertThat(responseBody.get("message").asText()).isEqualTo(ErrorCode.INVALID_TOKEN.getMessage());
+        assertThat(response.getStatus()).isEqualTo(AuthErrorCode.INVALID_TOKEN.getStatus().value());
+        assertThat(responseBody.get("status").asInt()).isEqualTo(AuthErrorCode.INVALID_TOKEN.getStatus().value());
+        assertThat(responseBody.get("message").asText()).isEqualTo(AuthErrorCode.INVALID_TOKEN.getMessage());
     }
 
     @Test
@@ -42,8 +43,8 @@ class SecurityExceptionHandlerTest {
         accessDeniedHandler.handle(request, response, new AccessDeniedException("denied"));
         var responseBody = objectMapper.readTree(response.getContentAsString());
 
-        assertThat(response.getStatus()).isEqualTo(ErrorCode.ACCESS_DENIED.getStatus().value());
-        assertThat(responseBody.get("status").asInt()).isEqualTo(ErrorCode.ACCESS_DENIED.getStatus().value());
-        assertThat(responseBody.get("message").asText()).isEqualTo(ErrorCode.ACCESS_DENIED.getMessage());
+        assertThat(response.getStatus()).isEqualTo(GlobalErrorCode.ACCESS_DENIED.getStatus().value());
+        assertThat(responseBody.get("status").asInt()).isEqualTo(GlobalErrorCode.ACCESS_DENIED.getStatus().value());
+        assertThat(responseBody.get("message").asText()).isEqualTo(GlobalErrorCode.ACCESS_DENIED.getMessage());
     }
 }

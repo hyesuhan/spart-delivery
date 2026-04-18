@@ -1,7 +1,7 @@
 package com.sparta.spartadelivery.global.infrastructure.config.security;
 
+import com.sparta.spartadelivery.auth.exception.AuthErrorCode;
 import com.sparta.spartadelivery.global.exception.AppException;
-import com.sparta.spartadelivery.global.exception.ErrorCode;
 import com.sparta.spartadelivery.user.domain.entity.UserEntity;
 import com.sparta.spartadelivery.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String email) {
         UserEntity user = userRepository.findByEmailAndDeletedAtIsNull(email)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(AuthErrorCode.USER_NOT_FOUND));
         return UserPrincipal.from(user);
     }
 }
