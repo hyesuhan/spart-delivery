@@ -1,7 +1,7 @@
 package com.sparta.spartadelivery.global.infrastructure.config.security;
 
+import com.sparta.spartadelivery.auth.exception.AuthErrorCode;
 import com.sparta.spartadelivery.global.exception.AppException;
-import com.sparta.spartadelivery.global.exception.ErrorCode;
 import com.sparta.spartadelivery.user.domain.entity.UserEntity;
 import com.sparta.spartadelivery.user.domain.repository.UserRepository;
 import jakarta.servlet.FilterChain;
@@ -51,11 +51,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = authorizationHeader.substring(BEARER_PREFIX.length());
             JwtTokenProvider.TokenPayload tokenPayload = jwtTokenProvider.getPayload(token);
             UserEntity user = userRepository.findByIdAndDeletedAtIsNull(tokenPayload.userId())
-                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+                    .orElseThrow(() -> new AppException(AuthErrorCode.USER_NOT_FOUND));
 
             // 토큰 발급 이후 사용자의 username/role이 바뀐 경우 기존 토큰을 더 이상 신뢰하지 않는다.
             if (user.getRole() != tokenPayload.role() || !user.getUsername().equals(tokenPayload.username())) {
-                throw new AppException(ErrorCode.ROLE_REVALIDATION_FAILED);
+                throw new AppException(AuthErrorCode.ROLE_REVALIDATION_FAILED);
             }
 
             // 인증이 완료된 사용자 정보를 이후 컨트롤러와 @AuthenticationPrincipal에서 사용할 수 있게 저장한다.

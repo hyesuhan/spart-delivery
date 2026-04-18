@@ -1,7 +1,7 @@
 package com.sparta.spartadelivery.global.infrastructure.config.security;
 
+import com.sparta.spartadelivery.auth.exception.AuthErrorCode;
 import com.sparta.spartadelivery.global.exception.AppException;
-import com.sparta.spartadelivery.global.exception.ErrorCode;
 import com.sparta.spartadelivery.user.domain.entity.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -57,7 +57,7 @@ public class JwtTokenProvider {
                     Role.valueOf(claims.get(ROLE_CLAIM, String.class))
             );
         } catch (JwtException | IllegalArgumentException exception) {
-            throw new AppException(ErrorCode.INVALID_TOKEN);
+            throw new AppException(AuthErrorCode.INVALID_TOKEN);
         }
     }
 

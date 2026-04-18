@@ -7,8 +7,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.sparta.spartadelivery.auth.exception.AuthErrorCode;
 import com.sparta.spartadelivery.global.exception.AppException;
-import com.sparta.spartadelivery.global.exception.ErrorCode;
 import com.sparta.spartadelivery.user.domain.entity.Role;
 import com.sparta.spartadelivery.user.domain.entity.UserEntity;
 import com.sparta.spartadelivery.user.domain.repository.UserRepository;
@@ -110,8 +110,8 @@ class JwtAuthenticationFilterTest {
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verify(errorResponder).write(
                 response,
-                ErrorCode.USER_NOT_FOUND.getStatus().value(),
-                ErrorCode.USER_NOT_FOUND.getMessage()
+                AuthErrorCode.USER_NOT_FOUND.getStatus().value(),
+                AuthErrorCode.USER_NOT_FOUND.getMessage()
         );
     }
 
@@ -134,8 +134,8 @@ class JwtAuthenticationFilterTest {
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verify(errorResponder).write(
                 response,
-                ErrorCode.ROLE_REVALIDATION_FAILED.getStatus().value(),
-                ErrorCode.ROLE_REVALIDATION_FAILED.getMessage()
+                AuthErrorCode.ROLE_REVALIDATION_FAILED.getStatus().value(),
+                AuthErrorCode.ROLE_REVALIDATION_FAILED.getMessage()
         );
     }
 
@@ -158,8 +158,8 @@ class JwtAuthenticationFilterTest {
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verify(errorResponder).write(
                 response,
-                ErrorCode.ROLE_REVALIDATION_FAILED.getStatus().value(),
-                ErrorCode.ROLE_REVALIDATION_FAILED.getMessage()
+                AuthErrorCode.ROLE_REVALIDATION_FAILED.getStatus().value(),
+                AuthErrorCode.ROLE_REVALIDATION_FAILED.getMessage()
         );
     }
 
@@ -172,7 +172,7 @@ class JwtAuthenticationFilterTest {
         CountingFilterChain filterChain = new CountingFilterChain();
 
         when(jwtTokenProvider.getPayload("invalid-token"))
-                .thenThrow(new AppException(ErrorCode.INVALID_TOKEN));
+                .thenThrow(new AppException(AuthErrorCode.INVALID_TOKEN));
 
         jwtAuthenticationFilter.doFilter(request, response, filterChain);
 
@@ -180,8 +180,8 @@ class JwtAuthenticationFilterTest {
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         verify(errorResponder).write(
                 response,
-                ErrorCode.INVALID_TOKEN.getStatus().value(),
-                ErrorCode.INVALID_TOKEN.getMessage()
+                AuthErrorCode.INVALID_TOKEN.getStatus().value(),
+                AuthErrorCode.INVALID_TOKEN.getMessage()
         );
     }
 

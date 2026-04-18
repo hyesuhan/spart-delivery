@@ -1,8 +1,8 @@
 package com.sparta.spartadelivery.global.presentation.advice;
 
 import com.sparta.spartadelivery.global.exception.AppException;
-import com.sparta.spartadelivery.global.exception.ErrorCode;
-import com.sparta.spartadelivery.global.exception.code.BaseErrorCode;
+import com.sparta.spartadelivery.global.exception.GlobalErrorCode;
+import com.sparta.spartadelivery.global.exception.BaseErrorCode;
 import com.sparta.spartadelivery.global.presentation.dto.ApiResponse;
 import com.sparta.spartadelivery.global.presentation.dto.ValidationErrorResponse;
 import org.springframework.http.HttpStatus;
@@ -44,8 +44,8 @@ public class GlobalExceptionHandler {
         }
         return ResponseEntity.badRequest()
                 .body(ApiResponse.error(
-                        ErrorCode.VALIDATION_ERROR.getStatus().value(),
-                        ErrorCode.VALIDATION_ERROR.getMessage(),
+                        GlobalErrorCode.VALIDATION_ERROR.getStatus().value(),
+                        GlobalErrorCode.VALIDATION_ERROR.getMessage(),
                         errors
         ));
     }
@@ -55,8 +55,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException ignored) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.error(
-                        ErrorCode.ACCESS_DENIED.getStatus().value(),
-                        ErrorCode.ACCESS_DENIED.getMessage(),
+                        GlobalErrorCode.ACCESS_DENIED.getStatus().value(),
+                        GlobalErrorCode.ACCESS_DENIED.getMessage(),
                         null
         ));
     }
@@ -66,8 +66,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleException(Exception ignored) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(
-                        ErrorCode.INTERNAL_SERVER_ERROR.getStatus().value(),
-                        ErrorCode.INTERNAL_SERVER_ERROR.getMessage(),
+                        GlobalErrorCode.INTERNAL_SERVER_ERROR.getStatus().value(),
+                        GlobalErrorCode.INTERNAL_SERVER_ERROR.getMessage(),
                         null
                 ));
     }

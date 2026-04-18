@@ -1,6 +1,6 @@
 package com.sparta.spartadelivery.global.infrastructure.config.security;
 
-import com.sparta.spartadelivery.global.exception.ErrorCode;
+import com.sparta.spartadelivery.global.exception.GlobalErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -26,8 +26,8 @@ public class RestAccessDeniedHandler implements org.springframework.security.web
         // 인가 실패는 인증된 사용자라도 현재 권한으로는 접근할 수 없는 상황으로 처리한다.
         errorResponder.write(
                 response,
-                ErrorCode.ACCESS_DENIED.getStatus().value(),
-                ErrorCode.ACCESS_DENIED.getMessage()
+                GlobalErrorCode.ACCESS_DENIED.getStatus().value(),
+                GlobalErrorCode.ACCESS_DENIED.getMessage()
         );
     }
 }
