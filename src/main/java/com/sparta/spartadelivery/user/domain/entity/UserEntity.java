@@ -57,4 +57,23 @@ public class UserEntity extends BaseEntity {
         this.role = role;
         this.isPublic = isPublic;
     }
+
+    public void updateProfile(String username, String nickname, String email, Boolean isPublic) {
+        if (username != null) {
+            this.username = username;
+        }
+        if (nickname != null) {
+            this.nickname = nickname;
+        }
+        if (email != null) {
+            this.email = email;
+        }
+        if (isPublic != null) {
+            this.isPublic = isPublic;
+        }
+    }
+
+    public void updatePassword(String password) {
+        this.password = password;
+    }
 }
