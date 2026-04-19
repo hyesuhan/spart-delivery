@@ -7,6 +7,8 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum AddressErrorCode implements BaseErrorCode {
 
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),
+
     INVALID_ADDRESS_FORMAT(HttpStatus.BAD_REQUEST, "유효하지 않은 주소 형식입니다."),
     MISSING_ADDRESS_DETAIL(HttpStatus.BAD_REQUEST, "필수 주소 정보가 누락되었습니다."),
     NOT_SERVICEABLE_AREA(HttpStatus.BAD_REQUEST, "서비스 불가능 지역입니다."),

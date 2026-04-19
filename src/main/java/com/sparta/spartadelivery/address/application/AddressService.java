@@ -71,7 +71,7 @@ public class AddressService {
         Address address = addressRepository.findById(addressId)
                 .orElseThrow(() -> new AppException(AddressErrorCode.ADDRESS_NOT_FOUND, "주소를 찾을 수 없습니다."));
 
-        validateDeleteUser(userId, address.getUser().getUsername());
+        validateDeleteUser(user, address);
 
         address.markDeleted(user.getUsername());
     }
@@ -92,7 +92,7 @@ public class AddressService {
     private UserEntity getUser(Long id) {
 
         return userRepository.findById(id)
-                .orElseThrow(() -> new AppException(AddressErrorCode.ADDRESS_ACCESS_DENIED, "사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new AppException(AddressErrorCode.USER_NOT_FOUND, "사용자를 찾을 수 없습니다."));
     }
 
     private Address findAndValidateAddress(UUID addressId, UserEntity user) {
@@ -107,12 +107,11 @@ public class AddressService {
         return  address;
     }
 
-    private void validateDeleteUser(Long userId, String ownerUsername) {
-        UserEntity user = getUser(userId);
+    private void validateDeleteUser(UserEntity user, Address address) {
 
         boolean isAdmin = user.getRole().equals(Role.MASTER);
 
-        boolean isOwner = user.getUsername().equals(ownerUsername);
+        boolean isOwner = user.getUsername().equals(address.getUser().getUsername());
 
         if (!isAdmin && !isOwner) {
             throw new AppException(AddressErrorCode.ADDRESS_ACCESS_DENIED, "해당 접근 권한이 없습니다.");
