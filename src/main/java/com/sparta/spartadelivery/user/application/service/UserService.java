@@ -56,6 +56,13 @@ public class UserService {
         return ResUserDetailDto.from(user);
     }
 
+    // 본인 회원 탈퇴 API
+    @Transactional
+    public void deleteMe(UserPrincipal requester) {
+        UserEntity user = getActiveUser(requester.getId());
+        user.markDeleted(requester.getAccountName());
+    }
+
     // 사용자 목록 조회 API
     @Transactional(readOnly = true)
     public ResUserPageDto getUsers(
@@ -148,7 +155,6 @@ public class UserService {
         throw new AppException(UserErrorCode.USER_DETAIL_ACCESS_DENIED);
     }
 
-    // 삭제되지 않은 활성 사용자만 상세 조회 대상으로 사용한다.
     private UserEntity getActiveUser(Long userId) {
         return userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new AppException(AuthErrorCode.USER_NOT_FOUND));
