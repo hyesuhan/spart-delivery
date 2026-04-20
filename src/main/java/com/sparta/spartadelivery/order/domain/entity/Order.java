@@ -36,6 +36,10 @@ public class Order extends BaseEntity {
     private Store store;
      */
 
+    // 현재 이로 대체합니다.
+    @Column(name = "store_id")
+    private UUID storeId;
+
 
     // 배송지 (N : 1)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -45,7 +49,7 @@ public class Order extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
-    private OrderType type = OrderType.ONLINE; // 기본값은 ONLINE으로 설정
+    private OrderType orderType = OrderType.ONLINE; // 기본값은 ONLINE으로 설정
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
@@ -57,13 +61,15 @@ public class Order extends BaseEntity {
     private String request;
 
     @Builder
-    public Order(UserEntity user, Address address, Integer totalPrice, String request) {
+    public Order(UserEntity user, Address address, UUID storeId, Integer totalPrice, String request) {
         this.customer = user;
         this.address = address;
+        this.storeId = storeId;
         validTotalPrice(totalPrice);
         this.totalPrice = totalPrice;
         this.request = request;
     }
+
 
     public void cancel() {
         validCancelTime(this.getCreatedAt());
