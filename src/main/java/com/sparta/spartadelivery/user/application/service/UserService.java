@@ -60,6 +60,7 @@ public class UserService {
     @Transactional
     public void deleteMe(UserPrincipal requester) {
         UserEntity user = getActiveUser(requester.getId());
+        validateMasterDeleteDenied(user);
         user.markDeleted(requester.getAccountName());
     }
 
@@ -209,6 +210,12 @@ public class UserService {
 
     private boolean canManagerUpdate(UserEntity targetUser) {
         return targetUser.getRole() == Role.CUSTOMER || targetUser.getRole() == Role.OWNER;
+    }
+
+    private void validateMasterDeleteDenied(UserEntity targetUser) {
+        if (targetUser.getRole() == Role.MASTER) {
+            throw new AppException(UserErrorCode.MASTER_DELETE_DENIED);
+        }
     }
 
     private void validateRoleUpdatePermission(UserPrincipal requester, UserEntity targetUser) {

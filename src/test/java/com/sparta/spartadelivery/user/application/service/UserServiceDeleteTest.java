@@ -11,6 +11,7 @@ import com.sparta.spartadelivery.auth.exception.AuthErrorCode;
 import com.sparta.spartadelivery.user.domain.entity.Role;
 import com.sparta.spartadelivery.user.domain.entity.UserEntity;
 import com.sparta.spartadelivery.user.domain.repository.UserRepository;
+import com.sparta.spartadelivery.user.exception.UserErrorCode;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,8 +32,8 @@ class UserServiceDeleteTest {
     private UserService userService;
 
     @ParameterizedTest
-    @EnumSource(Role.class)
-    @DisplayName("모든 권한은 본인 계정을 탈퇴할 수 있다")
+    @EnumSource(value = Role.class, names = {"CUSTOMER", "OWNER", "MANAGER"})
+    @DisplayName("CUSTOMER, OWNER, MANAGER는 본인 계정을 탈퇴할 수 있다")
     void deleteMeByAnyRole(Role requesterRole) {
         UserEntity user = createUser(USER_ID, requesterRole);
         when(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).thenReturn(Optional.of(user));
@@ -42,6 +43,21 @@ class UserServiceDeleteTest {
         assertThat(user.isDeleted()).isTrue();
         assertThat(user.getDeletedAt()).isNotNull();
         assertThat(user.getDeletedBy()).isEqualTo("requester");
+    }
+
+    @Test
+    @DisplayName("MASTER는 본인 계정을 탈퇴할 수 없다")
+    void deleteMeByMasterDenied() {
+        UserEntity user = createUser(USER_ID, Role.MASTER);
+        when(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).thenReturn(Optional.of(user));
+
+        assertAppException(
+                () -> userService.deleteMe(principal(USER_ID, Role.MASTER)),
+                UserErrorCode.MASTER_DELETE_DENIED
+        );
+        assertThat(user.isDeleted()).isFalse();
+        assertThat(user.getDeletedAt()).isNull();
+        assertThat(user.getDeletedBy()).isNull();
     }
 
     @Test
