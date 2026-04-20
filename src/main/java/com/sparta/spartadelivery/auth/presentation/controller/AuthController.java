@@ -51,7 +51,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<ResLoginDto>> login(@Valid @RequestBody ReqLoginDto request) {
         ResLoginDto response = authService.login(request);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "SUCCESS", response));
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 
     // TODO : 컨트롤러에서 현재 사용자 꺼내는 예시, 팀원들 확인이 끝나면 추후 삭제 예정
@@ -68,6 +68,6 @@ public class AuthController {
                 "email", userPrincipal.getEmail(),
                 "role", userPrincipal.getRole()
         );
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "SUCCESS", response));
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 }
