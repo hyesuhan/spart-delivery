@@ -2,7 +2,10 @@ package com.sparta.spartadelivery.user.presentation.controller;
 
 import com.sparta.spartadelivery.global.infrastructure.config.security.UserPrincipal;
 import com.sparta.spartadelivery.global.presentation.dto.ApiResponse;
-import com.sparta.spartadelivery.user.application.service.UserService;
+import com.sparta.spartadelivery.user.application.service.UserDeleteService;
+import com.sparta.spartadelivery.user.application.service.UserQueryService;
+import com.sparta.spartadelivery.user.application.service.UserRoleService;
+import com.sparta.spartadelivery.user.application.service.UserUpdateService;
 import com.sparta.spartadelivery.user.domain.entity.Role;
 import com.sparta.spartadelivery.user.presentation.dto.request.ReqUpdateUserDto;
 import com.sparta.spartadelivery.user.presentation.dto.request.ReqUpdateUserRoleDto;
@@ -32,7 +35,10 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "User Admin", description = "관리자 사용자 관리 API")
 public class UserAdminController {
 
-    private final UserService userService;
+    private final UserQueryService userQueryService;
+    private final UserUpdateService userUpdateService;
+    private final UserRoleService userRoleService;
+    private final UserDeleteService userDeleteService;
 
     @Operation(
             summary = "사용자 목록 조회 API",
@@ -54,7 +60,7 @@ public class UserAdminController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String sort
     ) {
-        ResUserPageDto response = userService.getUsers(userPrincipal, keyword, role, page, size, sort);
+        ResUserPageDto response = userQueryService.getUsers(userPrincipal, keyword, role, page, size, sort);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 
@@ -75,7 +81,7 @@ public class UserAdminController {
             @PathVariable Long userId,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        ResUserDetailDto response = userService.getUser(userId, userPrincipal);
+        ResUserDetailDto response = userQueryService.getUser(userId, userPrincipal);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 
@@ -117,7 +123,7 @@ public class UserAdminController {
             @Valid @RequestBody ReqUpdateUserDto request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        ResUpdateUserDto response = userService.updateUser(userId, request, userPrincipal);
+        ResUpdateUserDto response = userUpdateService.updateUser(userId, request, userPrincipal);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 
@@ -149,7 +155,7 @@ public class UserAdminController {
             @PathVariable Long userId,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        userService.deleteUser(userId, userPrincipal);
+        userDeleteService.deleteUser(userId, userPrincipal);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), null));
     }
 
@@ -178,7 +184,7 @@ public class UserAdminController {
             @Valid @RequestBody ReqUpdateUserRoleDto request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        ResUpdateUserRoleDto response = userService.updateUserRole(userId, request, userPrincipal);
+        ResUpdateUserRoleDto response = userRoleService.updateUserRole(userId, request, userPrincipal);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 }

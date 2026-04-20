@@ -2,7 +2,9 @@ package com.sparta.spartadelivery.user.presentation.controller;
 
 import com.sparta.spartadelivery.global.infrastructure.config.security.UserPrincipal;
 import com.sparta.spartadelivery.global.presentation.dto.ApiResponse;
-import com.sparta.spartadelivery.user.application.service.UserService;
+import com.sparta.spartadelivery.user.application.service.UserDeleteService;
+import com.sparta.spartadelivery.user.application.service.UserQueryService;
+import com.sparta.spartadelivery.user.application.service.UserUpdateService;
 import com.sparta.spartadelivery.user.presentation.dto.request.ReqUpdateUserDto;
 import com.sparta.spartadelivery.user.presentation.dto.response.ResUserDetailDto;
 import com.sparta.spartadelivery.user.presentation.dto.response.ResUpdateUserDto;
@@ -26,7 +28,9 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "User", description = "사용자 본인 정보 API")
 public class UserController {
 
-    private final UserService userService;
+    private final UserQueryService userQueryService;
+    private final UserUpdateService userUpdateService;
+    private final UserDeleteService userDeleteService;
 
     // 로그인한 사용자의 본인 상세 정보를 조회한다.
     @Operation(
@@ -46,7 +50,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<ResUserDetailDto>> getMe(
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        ResUserDetailDto response = userService.getMe(userPrincipal);
+        ResUserDetailDto response = userQueryService.getMe(userPrincipal);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 
@@ -72,7 +76,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<Void>> deleteMe(
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        userService.deleteMe(userPrincipal);
+        userDeleteService.deleteMe(userPrincipal);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), null));
     }
 
@@ -107,7 +111,7 @@ public class UserController {
             @Valid @RequestBody ReqUpdateUserDto request,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
-        ResUpdateUserDto response = userService.updateMe(request, userPrincipal);
+        ResUpdateUserDto response = userUpdateService.updateMe(request, userPrincipal);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 }

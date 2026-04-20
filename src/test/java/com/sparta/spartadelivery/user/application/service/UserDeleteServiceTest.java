@@ -17,6 +17,7 @@ import com.sparta.spartadelivery.user.domain.repository.UserRepository;
 import com.sparta.spartadelivery.user.exception.UserErrorCode;
 import java.util.Optional;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,18 +25,24 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class UserServiceDeleteTest {
+class UserDeleteServiceTest {
 
     @Mock
     private UserRepository userRepository;
 
-    @InjectMocks
-    private UserService userService;
+    private UserDeleteService userDeleteService;
+
+    @BeforeEach
+    void setUp() {
+        userDeleteService = new UserDeleteService(
+                new UserReader(userRepository),
+                new UserPermissionPolicy()
+        );
+    }
 
     @ParameterizedTest
     @EnumSource(value = Role.class, names = {"CUSTOMER", "OWNER", "MANAGER"})
@@ -44,7 +51,7 @@ class UserServiceDeleteTest {
         UserEntity user = givenActiveUser(USER_ID, requesterRole);
         UserPrincipal requester = principal(USER_ID, requesterRole);
 
-        userService.deleteMe(requester);
+        userDeleteService.deleteMe(requester);
 
         assertDeleted(user, requester.getAccountName());
         verify(userRepository).findByIdAndDeletedAtIsNull(USER_ID);
@@ -57,7 +64,7 @@ class UserServiceDeleteTest {
         UserEntity targetUser = givenActiveUser(USER_ID, targetRole);
         UserPrincipal requester = principal(MANAGER_ID, Role.MASTER);
 
-        userService.deleteUser(USER_ID, requester);
+        userDeleteService.deleteUser(USER_ID, requester);
 
         assertDeleted(targetUser, requester.getAccountName());
         verify(userRepository).findByIdAndDeletedAtIsNull(USER_ID);
@@ -70,7 +77,7 @@ class UserServiceDeleteTest {
         UserEntity targetUser = givenActiveUser(USER_ID, targetRole);
         UserPrincipal requester = principal(MANAGER_ID, Role.MANAGER);
 
-        userService.deleteUser(USER_ID, requester);
+        userDeleteService.deleteUser(USER_ID, requester);
 
         assertDeleted(targetUser, requester.getAccountName());
         verify(userRepository).findByIdAndDeletedAtIsNull(USER_ID);
@@ -82,7 +89,7 @@ class UserServiceDeleteTest {
         UserEntity user = givenActiveUser(USER_ID, Role.MASTER);
 
         assertAppException(
-                () -> userService.deleteMe(principal(USER_ID, Role.MASTER)),
+                () -> userDeleteService.deleteMe(principal(USER_ID, Role.MASTER)),
                 UserErrorCode.MASTER_DELETE_DENIED
         );
         assertNotDeleted(user);
@@ -96,7 +103,7 @@ class UserServiceDeleteTest {
         UserEntity targetUser = givenActiveUser(USER_ID, Role.CUSTOMER);
 
         assertAppException(
-                () -> userService.deleteUser(USER_ID, principal(MANAGER_ID, requesterRole)),
+                () -> userDeleteService.deleteUser(USER_ID, principal(MANAGER_ID, requesterRole)),
                 UserErrorCode.USER_DELETE_ACCESS_DENIED
         );
         assertNotDeleted(targetUser);
@@ -110,7 +117,7 @@ class UserServiceDeleteTest {
         UserEntity targetUser = givenActiveUser(USER_ID, requesterRole);
 
         assertAppException(
-                () -> userService.deleteUser(USER_ID, principal(USER_ID, requesterRole)),
+                () -> userDeleteService.deleteUser(USER_ID, principal(USER_ID, requesterRole)),
                 UserErrorCode.SELF_DELETE_BY_ADMIN_API_DENIED
         );
         assertNotDeleted(targetUser);
@@ -124,7 +131,7 @@ class UserServiceDeleteTest {
         UserEntity targetUser = givenActiveUser(USER_ID, Role.MASTER);
 
         assertAppException(
-                () -> userService.deleteUser(USER_ID, principal(MANAGER_ID, requesterRole)),
+                () -> userDeleteService.deleteUser(USER_ID, principal(MANAGER_ID, requesterRole)),
                 UserErrorCode.MASTER_DELETE_DENIED
         );
         assertNotDeleted(targetUser);
@@ -137,7 +144,7 @@ class UserServiceDeleteTest {
         UserEntity targetUser = givenActiveUser(USER_ID, Role.MANAGER);
 
         assertAppException(
-                () -> userService.deleteUser(USER_ID, principal(MANAGER_ID, Role.MANAGER)),
+                () -> userDeleteService.deleteUser(USER_ID, principal(MANAGER_ID, Role.MANAGER)),
                 UserErrorCode.MANAGER_DELETE_TARGET_ACCESS_DENIED
         );
         assertNotDeleted(targetUser);
@@ -150,7 +157,7 @@ class UserServiceDeleteTest {
         when(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).thenReturn(Optional.empty());
 
         assertAppException(
-                () -> userService.deleteMe(principal(USER_ID, Role.CUSTOMER)),
+                () -> userDeleteService.deleteMe(principal(USER_ID, Role.CUSTOMER)),
                 AuthErrorCode.USER_NOT_FOUND
         );
         verify(userRepository).findByIdAndDeletedAtIsNull(USER_ID);
@@ -162,7 +169,7 @@ class UserServiceDeleteTest {
         when(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).thenReturn(Optional.empty());
 
         assertAppException(
-                () -> userService.deleteUser(USER_ID, principal(MANAGER_ID, Role.MASTER)),
+                () -> userDeleteService.deleteUser(USER_ID, principal(MANAGER_ID, Role.MASTER)),
                 AuthErrorCode.USER_NOT_FOUND
         );
         verify(userRepository).findByIdAndDeletedAtIsNull(USER_ID);

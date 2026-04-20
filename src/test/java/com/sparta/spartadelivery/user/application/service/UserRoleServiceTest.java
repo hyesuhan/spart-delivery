@@ -15,27 +15,30 @@ import com.sparta.spartadelivery.user.domain.repository.UserRepository;
 import com.sparta.spartadelivery.user.exception.UserErrorCode;
 import com.sparta.spartadelivery.user.presentation.dto.request.ReqUpdateUserRoleDto;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
-class UserServiceRoleTest {
+class UserRoleServiceTest {
 
     @Mock
     private UserRepository userRepository;
 
-    @Mock
-    private PasswordEncoder passwordEncoder;
+    private UserRoleService userRoleService;
 
-    @InjectMocks
-    private UserService userService;
+    @BeforeEach
+    void setUp() {
+        userRoleService = new UserRoleService(
+                new UserReader(userRepository),
+                new UserPermissionPolicy()
+        );
+    }
 
     @ParameterizedTest
     @EnumSource(Role.class)
@@ -44,7 +47,7 @@ class UserServiceRoleTest {
         UserEntity targetUser = givenUser(Role.CUSTOMER);
         ReqUpdateUserRoleDto request = roleUpdateRequest(newRole);
 
-        var response = userService.updateUserRole(USER_ID, request, principal(MANAGER_ID, Role.MASTER));
+        var response = userRoleService.updateUserRole(USER_ID, request, principal(MANAGER_ID, Role.MASTER));
 
         assertThat(targetUser.getRole()).isEqualTo(newRole);
         assertThat(response.id()).isEqualTo(USER_ID);
@@ -60,7 +63,7 @@ class UserServiceRoleTest {
         ReqUpdateUserRoleDto request = roleUpdateRequest(Role.OWNER);
 
         assertAppException(
-                () -> userService.updateUserRole(USER_ID, request, principal(MANAGER_ID, requesterRole)),
+                () -> userRoleService.updateUserRole(USER_ID, request, principal(MANAGER_ID, requesterRole)),
                 UserErrorCode.USER_ROLE_UPDATE_ACCESS_DENIED
         );
     }
@@ -72,7 +75,7 @@ class UserServiceRoleTest {
         ReqUpdateUserRoleDto request = roleUpdateRequest(Role.OWNER);
 
         assertAppException(
-                () -> userService.updateUserRole(USER_ID, request, principal(USER_ID, Role.MASTER)),
+                () -> userRoleService.updateUserRole(USER_ID, request, principal(USER_ID, Role.MASTER)),
                 UserErrorCode.SELF_ROLE_UPDATE_DENIED
         );
     }
@@ -84,7 +87,7 @@ class UserServiceRoleTest {
         when(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).thenReturn(Optional.empty());
 
         assertAppException(
-                () -> userService.updateUserRole(USER_ID, request, principal(MANAGER_ID, Role.MASTER)),
+                () -> userRoleService.updateUserRole(USER_ID, request, principal(MANAGER_ID, Role.MASTER)),
                 AuthErrorCode.USER_NOT_FOUND
         );
     }
