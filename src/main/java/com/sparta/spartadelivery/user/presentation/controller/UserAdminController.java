@@ -53,7 +53,7 @@ public class UserAdminController {
             @RequestParam(required = false) String sort
     ) {
         ResUserPageDto response = userService.getUsers(userPrincipal, keyword, role, page, size, sort);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "SUCCESS", response));
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 
     @Operation(
@@ -95,7 +95,7 @@ public class UserAdminController {
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
         ResUpdateUserDto response = userService.updateUser(userId, request, userPrincipal);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "SUCCESS", response));
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 
     @Operation(
@@ -124,6 +124,6 @@ public class UserAdminController {
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
         ResUpdateUserRoleDto response = userService.updateUserRole(userId, request, userPrincipal);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "SUCCESS", response));
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 }

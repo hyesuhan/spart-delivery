@@ -57,6 +57,6 @@ public class UserController {
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
         ResUpdateUserDto response = userService.updateMe(request, userPrincipal);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "SUCCESS", response));
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 }
