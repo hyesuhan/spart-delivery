@@ -9,9 +9,14 @@ import com.sparta.spartadelivery.user.domain.repository.UserRepository;
 import com.sparta.spartadelivery.user.exception.UserErrorCode;
 import com.sparta.spartadelivery.user.presentation.dto.request.ReqUpdateUserDto;
 import com.sparta.spartadelivery.user.presentation.dto.request.ReqUpdateUserRoleDto;
+import com.sparta.spartadelivery.user.presentation.dto.response.ResUserPageDto;
 import com.sparta.spartadelivery.user.presentation.dto.response.ResUpdateUserDto;
 import com.sparta.spartadelivery.user.presentation.dto.response.ResUpdateUserRoleDto;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,8 +25,37 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UserService {
 
+    private static final Set<Integer> ALLOWED_PAGE_SIZES = Set.of(10, 30, 50);
+    private static final Set<String> ALLOWED_SORT_PROPERTIES = Set.of(
+            "id",
+            "username",
+            "nickname",
+            "email",
+            "role",
+            "createdAt",
+            "updatedAt"
+    );
+    private static final String DEFAULT_SORT = "createdAt,DESC";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+
+    // 사용자 목록 조회 API
+    @Transactional(readOnly = true)
+    public ResUserPageDto getUsers(
+            UserPrincipal requester,
+            String keyword,
+            Role role,
+            int page,
+            int size,
+            String sort
+    ) {
+        validateUserListPermission(requester);
+        String normalizedKeyword = normalizeKeyword(keyword);
+        String normalizedSort = normalizeSort(sort);
+        Pageable pageable = createPageable(page, size, normalizedSort);
+        return ResUserPageDto.from(userRepository.searchUsers(normalizedKeyword, role, pageable), normalizedSort);
+    }
 
     // 본인 정보 수정 API (CUSTOMER, OWNER, MANAGER, MASTER 모두 사용 가능)
     @Transactional
@@ -80,6 +114,55 @@ public class UserService {
             throw new AppException(UserErrorCode.MANAGER_TARGET_ACCESS_DENIED);
         } // MANAGER 또는 MASTER가 아닌 일반 사용자는 다른 사용자의 정보를 수정할 권한이 없다.
         throw new AppException(UserErrorCode.USER_UPDATE_ACCESS_DENIED);
+    }
+
+
+    // 사용자 목록 조회 요청 시 MANAGER, MASTER 권한만 조회 가능하도록 접근 제어 적용
+    private void validateUserListPermission(UserPrincipal requester) {
+        if (requester.getRole() == Role.MANAGER || requester.getRole() == Role.MASTER) {
+            return;
+        }
+        throw new AppException(UserErrorCode.USER_LIST_ACCESS_DENIED);
+    }
+
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        return keyword.trim();
+    }
+
+    private String normalizeSort(String sort) {
+        if (sort == null || sort.isBlank()) {
+            return DEFAULT_SORT;
+        }
+        String[] parts = sort.split(",");
+        if (parts.length != 2) {
+            throw new AppException(UserErrorCode.USER_LIST_INVALID_SORT_FORMAT);
+        }
+
+        String property = parts[0].trim();
+        String direction = parts[1].trim().toUpperCase();
+        if (!ALLOWED_SORT_PROPERTIES.contains(property)) {
+            throw new AppException(UserErrorCode.USER_LIST_UNSUPPORTED_SORT_PROPERTY);
+        }
+        if (!direction.equals("ASC") && !direction.equals("DESC")) {
+            throw new AppException(UserErrorCode.USER_LIST_UNSUPPORTED_SORT_DIRECTION);
+        }
+        return property + "," + direction;
+    }
+
+    // 페이지네이션과 정렬 조건을 검증해 Pageable로 변환한다.
+    private Pageable createPageable(int page, int size, String sort) {
+        if (page < 0) {
+            throw new AppException(UserErrorCode.USER_LIST_INVALID_PAGE_NUMBER);
+        }
+        if (!ALLOWED_PAGE_SIZES.contains(size)) {
+            throw new AppException(UserErrorCode.USER_LIST_INVALID_PAGE_SIZE);
+        }
+
+        String[] parts = sort.split(",");
+        return PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(parts[1]), parts[0]));
     }
 
     private void validateAdminUpdateFields(ReqUpdateUserDto request) {

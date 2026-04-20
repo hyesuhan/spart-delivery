@@ -8,6 +8,7 @@ import com.sparta.spartadelivery.address.exception.AddressErrorCode;
 import com.sparta.spartadelivery.address.presentation.dto.request.AddressCreateRequest;
 import com.sparta.spartadelivery.address.presentation.dto.request.AddressUpdateRequest;
 import com.sparta.spartadelivery.address.presentation.dto.response.AddressDetailInfo;
+import com.sparta.spartadelivery.address.presentation.dto.response.AddressInfo;
 import com.sparta.spartadelivery.global.exception.AppException;
 import com.sparta.spartadelivery.global.infrastructure.config.security.JwtAuthenticationFilter;
 import com.sparta.spartadelivery.global.infrastructure.config.security.JwtTokenProvider;
@@ -31,7 +32,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
+
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
@@ -148,6 +151,49 @@ public class AddressControllerTest {
                         .with(authentication(authToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.alias").value("집"));
+    }
+
+    @Test
+    @DisplayName("배송지 전체 조회 성공 - 200 OK")
+     void getAddressList_Success() throws Exception {
+        // given
+        AddressDetailInfo response1 =
+                new AddressDetailInfo(UUID.randomUUID(), "집", "서울", "101", "123", true, now);
+        AddressDetailInfo response2 =
+                new AddressDetailInfo(UUID.randomUUID(), "회사", "경기", "202", "456", false, now);
+
+        AddressInfo res1 = new AddressInfo(response1.id(), response1.alias(), response1.address());
+        AddressInfo res2 = new AddressInfo(response2.id(), response2.alias(), response2.address());
+
+        given(addressService.getAddresses(anyLong()))
+                .willReturn(List.of(res1, res2));
+
+        // when & then
+        mockMvc.perform(get("/api/addresses")
+                        .with(authentication(authToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].alias").value("집"))
+                .andExpect(jsonPath("$.data[1].alias").value("회사"));
+    }
+
+    @Test
+    @DisplayName("배송지 수정 성공 - 200 OK")
+    void updateAddress_Success() throws Exception {
+        AddressUpdateRequest request =
+                new AddressUpdateRequest("회사", "경기", "2층", "55555", false);
+        AddressInfo response =
+                new AddressInfo(addressId, "회사", "경기");
+
+        given(addressService.updatedAddress(any(UUID.class), any(AddressUpdateRequest.class), anyLong()))
+                .willReturn(response);
+
+        mockMvc.perform(put("/api/addresses/{addressId}", addressId)
+                        .with(authentication(authToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.alias").value("회사"))
+                .andExpect(jsonPath("$.data.address").value("경기"));
     }
 
     @Test

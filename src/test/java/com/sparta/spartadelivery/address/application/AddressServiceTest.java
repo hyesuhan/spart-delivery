@@ -6,6 +6,7 @@ import com.sparta.spartadelivery.address.presentation.dto.request.AddressCreateR
 import com.sparta.spartadelivery.address.presentation.dto.request.AddressUpdateRequest;
 import com.sparta.spartadelivery.address.presentation.dto.response.AddressDetailInfo;
 import com.sparta.spartadelivery.address.presentation.dto.response.AddressInfo;
+import com.sparta.spartadelivery.global.exception.AppException;
 import com.sparta.spartadelivery.user.domain.entity.Role;
 import com.sparta.spartadelivery.user.domain.entity.UserEntity;
 import com.sparta.spartadelivery.user.domain.repository.UserRepository;
@@ -23,6 +24,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
@@ -79,6 +81,46 @@ public class AddressServiceTest {
     }
 
     @Test
+    @DisplayName("배송지 단거 조회 테스트")
+    void getAddress_Success() {
+        // given
+        given(userRepository.findById(any())).willReturn(Optional.of(user));
+        given(addressRepository.findById(addressId)).willReturn(Optional.of(address));
+
+        // when
+        AddressDetailInfo result = addressService.getAddress(addressId, 1L);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.alias()).isEqualTo("우리집");
+        verify(addressRepository).findById(addressId);
+    }
+
+    @Test
+    @DisplayName("배송지 단건 조회 실패 테스트 - username이 다르면 접근이 불가합니다.")
+    void getAddress_fail() {
+        // given
+        UserEntity otherUser = UserEntity.builder()
+                .username("other_user")
+                .role(Role.CUSTOMER)
+                .build();
+
+        Address othersAddress = Address.builder()
+                .user(otherUser)
+                .alias("남의 집")
+                .address("부산")
+                .build();
+
+        given(userRepository.findById(any())).willReturn(Optional.of(user));
+        given(addressRepository.findById(addressId)).willReturn(Optional.of(othersAddress));
+
+        // when & then
+        assertThrows(AppException.class, () -> {
+            addressService.getAddress(addressId, 1L);
+        });
+    }
+
+    @Test
     @DisplayName("사용자의 배송지 목록 조회 테스트")
     void getAddresses_Success() {
         // given
@@ -93,6 +135,8 @@ public class AddressServiceTest {
         assertThat(results.get(0).alias()).isEqualTo("우리집");
         verify(addressRepository).findAllByUserAndDeletedAtIsNull(user);
     }
+
+
 
     @Test
     @DisplayName("배송지 정보 수정 테스트")
@@ -186,7 +230,7 @@ public class AddressServiceTest {
 
         // when & then
         // 권한이 없으므로 AppException(ADDRESS_ACCESS_DENIED)이 발생해야 함
-        org.junit.jupiter.api.Assertions.assertThrows(com.sparta.spartadelivery.global.exception.AppException.class, () -> {
+        assertThrows(com.sparta.spartadelivery.global.exception.AppException.class, () -> {
             addressService.deleteAddress(addressId, 2L);
         });
     }
