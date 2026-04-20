@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -47,6 +48,32 @@ public class UserController {
     ) {
         ResUserDetailDto response = userService.getMe(userPrincipal);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
+    }
+
+    // 로그인한 사용자의 본인 계정을 탈퇴 처리한다.
+    @Operation(
+            summary = "본인 회원 탈퇴 API",
+            description = """
+                    현재 로그인한 사용자의 계정을 탈퇴 처리합니다.
+
+                    **요청 가능 권한**
+
+                    - CUSTOMER
+                    - OWNER
+                    - MANAGER
+                    - MASTER
+
+                    **처리 정책**
+
+                    - 실제 데이터를 삭제하지 않고 deletedAt을 기록하는 soft delete 방식으로 처리합니다.
+                    """
+    )
+    @DeleteMapping("/user")
+    public ResponseEntity<ApiResponse<Void>> deleteMe(
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        userService.deleteMe(userPrincipal);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), null));
     }
 
     @Operation(
