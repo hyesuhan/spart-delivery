@@ -9,6 +9,7 @@ import com.sparta.spartadelivery.user.domain.repository.UserRepository;
 import com.sparta.spartadelivery.user.exception.UserErrorCode;
 import com.sparta.spartadelivery.user.presentation.dto.request.ReqUpdateUserDto;
 import com.sparta.spartadelivery.user.presentation.dto.request.ReqUpdateUserRoleDto;
+import com.sparta.spartadelivery.user.presentation.dto.response.ResUserDetailDto;
 import com.sparta.spartadelivery.user.presentation.dto.response.ResUserPageDto;
 import com.sparta.spartadelivery.user.presentation.dto.response.ResUpdateUserDto;
 import com.sparta.spartadelivery.user.presentation.dto.response.ResUpdateUserRoleDto;
@@ -39,6 +40,21 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+
+    // 본인 상세 조회 API
+    @Transactional(readOnly = true)
+    public ResUserDetailDto getMe(UserPrincipal requester) {
+        UserEntity user = getActiveUser(requester.getId());
+        return ResUserDetailDto.from(user);
+    }
+
+    // 다른 사용자 상세 조회 API (MANAGER, MASTER만 사용 가능)
+    @Transactional(readOnly = true)
+    public ResUserDetailDto getUser(Long userId, UserPrincipal requester) {
+        validateUserDetailPermission(requester);
+        UserEntity user = getActiveUser(userId);
+        return ResUserDetailDto.from(user);
+    }
 
     // 사용자 목록 조회 API
     @Transactional(readOnly = true)
@@ -123,6 +139,19 @@ public class UserService {
             return;
         }
         throw new AppException(UserErrorCode.USER_LIST_ACCESS_DENIED);
+    }
+
+    private void validateUserDetailPermission(UserPrincipal requester) {
+        if (requester.getRole() == Role.MANAGER || requester.getRole() == Role.MASTER) {
+            return;
+        }
+        throw new AppException(UserErrorCode.USER_DETAIL_ACCESS_DENIED);
+    }
+
+    // 삭제되지 않은 활성 사용자만 상세 조회 대상으로 사용한다.
+    private UserEntity getActiveUser(Long userId) {
+        return userRepository.findByIdAndDeletedAtIsNull(userId)
+                .orElseThrow(() -> new AppException(AuthErrorCode.USER_NOT_FOUND));
     }
 
     private String normalizeKeyword(String keyword) {

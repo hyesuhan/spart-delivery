@@ -4,6 +4,7 @@ import com.sparta.spartadelivery.global.infrastructure.config.security.UserPrinc
 import com.sparta.spartadelivery.global.presentation.dto.ApiResponse;
 import com.sparta.spartadelivery.user.application.service.UserService;
 import com.sparta.spartadelivery.user.presentation.dto.request.ReqUpdateUserDto;
+import com.sparta.spartadelivery.user.presentation.dto.response.ResUserDetailDto;
 import com.sparta.spartadelivery.user.presentation.dto.response.ResUpdateUserDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,6 +26,28 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final UserService userService;
+
+    // 로그인한 사용자의 본인 상세 정보를 조회한다.
+    @Operation(
+            summary = "본인 정보 상세 조회 API",
+            description = """
+                    현재 로그인한 사용자의 상세 정보를 조회합니다.
+
+                    **요청 가능 권한**
+
+                    - CUSTOMER
+                    - OWNER
+                    - MANAGER
+                    - MASTER
+                    """
+    )
+    @GetMapping("/user")
+    public ResponseEntity<ApiResponse<ResUserDetailDto>> getMe(
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        ResUserDetailDto response = userService.getMe(userPrincipal);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
+    }
 
     @Operation(
             summary = "본인 정보 수정 API",

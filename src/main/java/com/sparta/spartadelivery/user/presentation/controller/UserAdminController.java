@@ -6,6 +6,7 @@ import com.sparta.spartadelivery.user.application.service.UserService;
 import com.sparta.spartadelivery.user.domain.entity.Role;
 import com.sparta.spartadelivery.user.presentation.dto.request.ReqUpdateUserDto;
 import com.sparta.spartadelivery.user.presentation.dto.request.ReqUpdateUserRoleDto;
+import com.sparta.spartadelivery.user.presentation.dto.response.ResUserDetailDto;
 import com.sparta.spartadelivery.user.presentation.dto.response.ResUserPageDto;
 import com.sparta.spartadelivery.user.presentation.dto.response.ResUpdateUserDto;
 import com.sparta.spartadelivery.user.presentation.dto.response.ResUpdateUserRoleDto;
@@ -53,6 +54,27 @@ public class UserAdminController {
             @RequestParam(required = false) String sort
     ) {
         ResUserPageDto response = userService.getUsers(userPrincipal, keyword, role, page, size, sort);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
+    }
+
+    // 관리자 권한으로 대상 사용자의 상세 정보를 조회한다.
+    @Operation(
+            summary = "다른 사용자 정보 상세 조회 API",
+            description = """
+                    MANAGER 또는 MASTER 권한으로 대상 사용자의 상세 정보를 조회합니다.
+
+                    **요청 가능 권한**
+
+                    - MANAGER
+                    - MASTER
+                    """
+    )
+    @GetMapping("/{userId}")
+    public ResponseEntity<ApiResponse<ResUserDetailDto>> getUser(
+            @PathVariable Long userId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal
+    ) {
+        ResUserDetailDto response = userService.getUser(userId, userPrincipal);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 

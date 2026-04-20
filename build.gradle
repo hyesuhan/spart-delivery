@@ -50,6 +50,7 @@ dependencies {
 
 
     developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
+
 }
 
 tasks.named('test') {
