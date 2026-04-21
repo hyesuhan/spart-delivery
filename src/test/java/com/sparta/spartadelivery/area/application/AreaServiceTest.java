@@ -138,6 +138,38 @@ class AreaServiceTest {
     }
 
     @Test
+    @DisplayName("운영 지역 상세 정보를 조회할 수 있다")
+    void getArea() {
+        // given: 삭제되지 않은 운영 지역이 존재한다.
+        UUID areaId = UUID.randomUUID();
+        Area area = area("Gwanghwamun", "Seoul", "Jongno-gu", true);
+        when(areaRepository.findByIdAndDeletedAtIsNull(areaId)).thenReturn(Optional.of(area));
+
+        // when
+        var response = areaService.getArea(areaId);
+
+        // then
+        assertThat(response.name()).isEqualTo("Gwanghwamun");
+        assertThat(response.city()).isEqualTo("Seoul");
+        assertThat(response.district()).isEqualTo("Jongno-gu");
+        assertThat(response.active()).isTrue();
+    }
+
+    @Test
+    @DisplayName("상세 조회 대상 운영 지역이 없으면 조회할 수 없다")
+    void getAreaNotFound() {
+        // given: areaId에 해당하는 미삭제 운영 지역이 없다.
+        UUID areaId = UUID.randomUUID();
+        when(areaRepository.findByIdAndDeletedAtIsNull(areaId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> areaService.getArea(areaId))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(AreaErrorCode.AREA_NOT_FOUND);
+    }
+
+    @Test
     @DisplayName("MANAGER 권한 사용자는 운영 지역을 수정할 수 있다")
     void updateAreaByManager() {
         // given: 수정 대상 운영 지역과 MANAGER 권한 요청자를 준비한다.
