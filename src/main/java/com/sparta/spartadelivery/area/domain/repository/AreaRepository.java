@@ -5,4 +5,6 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AreaRepository extends JpaRepository<Area, UUID> {
+
+    boolean existsByNameAndDeletedAtIsNull(String name);
 }
