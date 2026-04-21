@@ -8,10 +8,13 @@ import com.sparta.spartadelivery.global.presentation.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -49,5 +52,29 @@ public class AreaController {
         AreaDetailResponse response = areaService.createArea(request, userPrincipal);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED.value(), "CREATED", response));
+    }
+
+    @Operation(
+            summary = "운영 지역 삭제 API",
+            description = """
+                    운영 지역을 soft delete 방식으로 삭제 처리합니다.
+
+                    **요청 가능 권한**
+
+                    - MASTER
+
+                    **처리 정책**
+
+                    - 실제 데이터를 삭제하지 않고 deletedAt, deletedBy를 기록합니다.
+                    - 이미 삭제된 운영 지역은 삭제 대상으로 조회되지 않습니다.
+                    """
+    )
+    @DeleteMapping("/{areaId}")
+    public ResponseEntity<ApiResponse<Void>> deleteArea(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @PathVariable UUID areaId
+    ) {
+        areaService.deleteArea(areaId, userPrincipal);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), null));
     }
 }
