@@ -8,6 +8,7 @@ import com.sparta.spartadelivery.area.presentation.dto.response.AreaDetailRespon
 import com.sparta.spartadelivery.global.exception.AppException;
 import com.sparta.spartadelivery.global.infrastructure.config.security.UserPrincipal;
 import com.sparta.spartadelivery.user.domain.entity.Role;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,11 +42,31 @@ public class AreaService {
         return AreaDetailResponse.from(areaRepository.save(area));
     }
 
+    @Transactional
+    public void deleteArea(UUID areaId, UserPrincipal requester) {
+        // 운영 지역 삭제는 MASTER 권한만 허용한다.
+        validateDeletePermission(requester);
+
+        // 이미 삭제된 운영 지역은 삭제 대상으로 다루지 않는다.
+        Area area = areaRepository.findByIdAndDeletedAtIsNull(areaId)
+                .orElseThrow(() -> new AppException(AreaErrorCode.AREA_NOT_FOUND));
+
+        // 실제 row를 삭제하지 않고 감사 필드에 삭제 시각과 삭제자를 기록한다.
+        area.markDeleted(requester.getAccountName());
+    }
+
     private void validateCreatePermission(UserPrincipal requester) {
         if (requester.getRole() == Role.MANAGER || requester.getRole() == Role.MASTER) {
             return;
         }
         throw new AppException(AreaErrorCode.AREA_CREATE_ACCESS_DENIED);
+    }
+
+    private void validateDeletePermission(UserPrincipal requester) {
+        if (requester.getRole() == Role.MASTER) {
+            return;
+        }
+        throw new AppException(AreaErrorCode.AREA_DELETE_ACCESS_DENIED);
     }
 
     private void validateDuplicateName(String name) {
