@@ -43,6 +43,11 @@ public class AreaService {
         return AreaDetailResponse.from(areaRepository.save(area));
     }
 
+    public AreaDetailResponse getArea(UUID areaId) {
+        Area area = getActiveArea(areaId);
+        return AreaDetailResponse.from(area);
+    }
+
     @Transactional
     public AreaDetailResponse updateArea(UUID areaId, AreaUpdateRequest request, UserPrincipal requester) {
         // 운영 지역 수정은 MANAGER, MASTER 권한만 허용한다.
