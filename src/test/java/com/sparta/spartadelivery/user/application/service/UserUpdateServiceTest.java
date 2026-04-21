@@ -23,18 +23,18 @@ import com.sparta.spartadelivery.user.domain.repository.UserRepository;
 import com.sparta.spartadelivery.user.exception.UserErrorCode;
 import com.sparta.spartadelivery.user.presentation.dto.request.ReqUpdateUserDto;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
-class UserServiceUpdateTest {
+class UserUpdateServiceTest {
 
     @Mock
     private UserRepository userRepository;
@@ -42,8 +42,17 @@ class UserServiceUpdateTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
-    @InjectMocks
-    private UserService userService;
+    private UserUpdateService userUpdateService;
+
+    @BeforeEach
+    void setUp() {
+        userUpdateService = new UserUpdateService(
+                userRepository,
+                passwordEncoder,
+                new UserReader(userRepository),
+                new UserPermissionPolicy()
+        );
+    }
 
     @Test
     @DisplayName("본인은 프로필과 비밀번호를 수정할 수 있다")
@@ -53,7 +62,7 @@ class UserServiceUpdateTest {
         when(userRepository.existsByEmail("user02@example.com")).thenReturn(false);
         when(passwordEncoder.encode("Password1!")).thenReturn("encoded-password");
 
-        var response = userService.updateMe(request, principal(USER_ID, Role.CUSTOMER));
+        var response = userUpdateService.updateMe(request, principal(USER_ID, Role.CUSTOMER));
 
         assertUpdatedProfile(user);
         assertThat(user.getPassword()).isEqualTo("encoded-password");
@@ -70,7 +79,7 @@ class UserServiceUpdateTest {
         ReqUpdateUserDto request = profileUpdateRequest();
         when(userRepository.existsByEmail("user02@example.com")).thenReturn(false);
 
-        userService.updateMe(request, principal(USER_ID, Role.CUSTOMER));
+        userUpdateService.updateMe(request, principal(USER_ID, Role.CUSTOMER));
 
         assertUpdatedProfile(user);
         assertThat(user.getPassword()).isEqualTo("old-password");
@@ -83,7 +92,7 @@ class UserServiceUpdateTest {
         UserEntity user = givenUser(Role.CUSTOMER);
         ReqUpdateUserDto request = nicknameOnlyRequest();
 
-        userService.updateMe(request, principal(USER_ID, Role.CUSTOMER));
+        userUpdateService.updateMe(request, principal(USER_ID, Role.CUSTOMER));
 
         assertThat(user.getUsername()).isEqualTo("user01");
         assertThat(user.getNickname()).isEqualTo("새닉네임");
@@ -102,7 +111,7 @@ class UserServiceUpdateTest {
         ReqUpdateUserDto request = profileUpdateRequest();
         when(userRepository.existsByEmail("user02@example.com")).thenReturn(false);
 
-        var response = userService.updateUser(USER_ID, request, principal(MANAGER_ID, Role.MANAGER));
+        var response = userUpdateService.updateUser(USER_ID, request, principal(MANAGER_ID, Role.MANAGER));
 
         assertUpdatedProfile(targetUser);
         assertThat(targetUser.getPassword()).isEqualTo("old-password");
@@ -117,7 +126,7 @@ class UserServiceUpdateTest {
         UserEntity targetUser = givenUser(targetRole);
         ReqUpdateUserDto request = usernameOnlyRequest();
 
-        var response = userService.updateUser(USER_ID, request, principal(MANAGER_ID, Role.MASTER));
+        var response = userUpdateService.updateUser(USER_ID, request, principal(MANAGER_ID, Role.MASTER));
 
         assertThat(targetUser.getUsername()).isEqualTo("user02");
         assertThat(response.role()).isEqualTo(targetRole);
@@ -131,7 +140,7 @@ class UserServiceUpdateTest {
         ReqUpdateUserDto request = usernameOnlyRequest();
 
         assertAppException(
-                () -> userService.updateUser(USER_ID, request, principal(2L, requesterRole)),
+                () -> userUpdateService.updateUser(USER_ID, request, principal(2L, requesterRole)),
                 UserErrorCode.USER_UPDATE_ACCESS_DENIED
         );
     }
@@ -144,7 +153,7 @@ class UserServiceUpdateTest {
         ReqUpdateUserDto request = usernameOnlyRequest();
 
         assertAppException(
-                () -> userService.updateUser(USER_ID, request, principal(MANAGER_ID, Role.MANAGER)),
+                () -> userUpdateService.updateUser(USER_ID, request, principal(MANAGER_ID, Role.MANAGER)),
                 UserErrorCode.MANAGER_TARGET_ACCESS_DENIED
         );
     }
@@ -156,7 +165,7 @@ class UserServiceUpdateTest {
         ReqUpdateUserDto request = passwordOnlyRequest();
 
         assertAppException(
-                () -> userService.updateUser(USER_ID, request, principal(MANAGER_ID, Role.MASTER)),
+                () -> userUpdateService.updateUser(USER_ID, request, principal(MANAGER_ID, Role.MASTER)),
                 UserErrorCode.MANAGER_OR_MASTER_CAN_NOT_CHANGE_USERS_PASSWORD
         );
         verify(passwordEncoder, never()).encode(any());
@@ -170,7 +179,7 @@ class UserServiceUpdateTest {
         when(userRepository.existsByEmail("duplicate@example.com")).thenReturn(true);
 
         assertAppException(
-                () -> userService.updateMe(request, principal(USER_ID, Role.CUSTOMER)),
+                () -> userUpdateService.updateMe(request, principal(USER_ID, Role.CUSTOMER)),
                 AuthErrorCode.DUPLICATE_EMAIL
         );
     }
@@ -183,7 +192,7 @@ class UserServiceUpdateTest {
         when(userRepository.existsByEmail("duplicate@example.com")).thenReturn(true);
 
         assertAppException(
-                () -> userService.updateUser(USER_ID, request, principal(MANAGER_ID, Role.MASTER)),
+                () -> userUpdateService.updateUser(USER_ID, request, principal(MANAGER_ID, Role.MASTER)),
                 AuthErrorCode.DUPLICATE_EMAIL
         );
     }
@@ -194,7 +203,7 @@ class UserServiceUpdateTest {
         UserEntity user = givenUser(Role.CUSTOMER);
         ReqUpdateUserDto request = emailOnlyRequest("user01@example.com");
 
-        userService.updateMe(request, principal(USER_ID, Role.CUSTOMER));
+        userUpdateService.updateMe(request, principal(USER_ID, Role.CUSTOMER));
 
         assertThat(user.getEmail()).isEqualTo("user01@example.com");
         verify(userRepository, never()).existsByEmail(any());
@@ -207,7 +216,7 @@ class UserServiceUpdateTest {
         when(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).thenReturn(Optional.empty());
 
         assertAppException(
-                () -> userService.updateMe(request, principal(USER_ID, Role.CUSTOMER)),
+                () -> userUpdateService.updateMe(request, principal(USER_ID, Role.CUSTOMER)),
                 AuthErrorCode.USER_NOT_FOUND
         );
     }
@@ -219,7 +228,7 @@ class UserServiceUpdateTest {
         when(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).thenReturn(Optional.empty());
 
         assertAppException(
-                () -> userService.updateUser(USER_ID, request, principal(MANAGER_ID, Role.MANAGER)),
+                () -> userUpdateService.updateUser(USER_ID, request, principal(MANAGER_ID, Role.MANAGER)),
                 AuthErrorCode.USER_NOT_FOUND
         );
     }

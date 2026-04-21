@@ -19,6 +19,7 @@ import com.sparta.spartadelivery.user.exception.UserErrorCode;
 import com.sparta.spartadelivery.user.presentation.dto.response.ResUserDetailDto;
 import java.util.Optional;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,22 +27,25 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
-class UserServiceDetailTest {
+class UserQueryServiceDetailTest {
 
     @Mock
     private UserRepository userRepository;
 
-    @Mock
-    private PasswordEncoder passwordEncoder;
+    private UserQueryService userQueryService;
 
-    @InjectMocks
-    private UserService userService;
+    @BeforeEach
+    void setUp() {
+        userQueryService = new UserQueryService(
+                userRepository,
+                new UserReader(userRepository),
+                new UserPermissionPolicy()
+        );
+    }
 
     @ParameterizedTest
     @EnumSource(Role.class)
@@ -50,7 +54,7 @@ class UserServiceDetailTest {
         UserEntity user = createUser(USER_ID, requesterRole);
         when(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).thenReturn(Optional.of(user));
 
-        var response = userService.getMe(principal(USER_ID, requesterRole));
+        var response = userQueryService.getMe(principal(USER_ID, requesterRole));
 
         assertUserDetailResponse(response, user);
     }
@@ -62,7 +66,7 @@ class UserServiceDetailTest {
         UserEntity targetUser = createUser(USER_ID, targetRole);
         when(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).thenReturn(Optional.of(targetUser));
 
-        var response = userService.getUser(USER_ID, principal(MANAGER_ID, requesterRole));
+        var response = userQueryService.getUser(USER_ID, principal(MANAGER_ID, requesterRole));
 
         assertUserDetailResponse(response, targetUser);
     }
@@ -72,7 +76,7 @@ class UserServiceDetailTest {
     @DisplayName("CUSTOMER와 OWNER는 다른 사용자 정보를 상세 조회할 수 없다")
     void getUserByCustomerOrOwnerDenied(Role requesterRole) {
         assertAppException(
-                () -> userService.getUser(USER_ID, principal(2L, requesterRole)),
+                () -> userQueryService.getUser(USER_ID, principal(2L, requesterRole)),
                 UserErrorCode.USER_DETAIL_ACCESS_DENIED
         );
         verify(userRepository, never()).findByIdAndDeletedAtIsNull(any());
@@ -84,7 +88,7 @@ class UserServiceDetailTest {
         when(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).thenReturn(Optional.empty());
 
         assertAppException(
-                () -> userService.getMe(principal(USER_ID, Role.CUSTOMER)),
+                () -> userQueryService.getMe(principal(USER_ID, Role.CUSTOMER)),
                 AuthErrorCode.USER_NOT_FOUND
         );
     }
@@ -95,7 +99,7 @@ class UserServiceDetailTest {
         when(userRepository.findByIdAndDeletedAtIsNull(USER_ID)).thenReturn(Optional.empty());
 
         assertAppException(
-                () -> userService.getUser(USER_ID, principal(MANAGER_ID, Role.MANAGER)),
+                () -> userQueryService.getUser(USER_ID, principal(MANAGER_ID, Role.MANAGER)),
                 AuthErrorCode.USER_NOT_FOUND
         );
     }
