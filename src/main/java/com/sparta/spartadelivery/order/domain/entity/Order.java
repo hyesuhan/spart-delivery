@@ -8,6 +8,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CollectionId;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -24,27 +25,18 @@ public class Order extends BaseEntity {
     private UUID id;
 
     // 주문자 (N : 1)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id", nullable = false)
-    private UserEntity customer;
+    @Column(name = "customer_id", nullable = false)
+    private Long customerId;
 
-
-    /*
-    // 주문 가게 (N : 1)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "store_id", nullable = false)
-    private Store store;
-     */
 
     // 현재 이로 대체합니다.
-    @Column(name = "store_id")
+    @Column(name = "store_id", nullable = false)
     private UUID storeId;
 
 
     // 배송지 (N : 1)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "address_id", nullable = false)
-    private Address address;
+    @Column(name = "address_id", nullable = false)
+    private UUID addressId;
 
 
     @Enumerated(EnumType.STRING)
@@ -55,15 +47,16 @@ public class Order extends BaseEntity {
     @Column(length = 20, nullable = false)
     private OrderStatus status = OrderStatus.PENDING; // 기본값은 PENDING으로 설정
 
+    @Column(nullable = false)
     private Integer totalPrice;
 
     @Column(columnDefinition = "TEXT")
     private String request;
 
     @Builder
-    public Order(UserEntity user, Address address, UUID storeId, Integer totalPrice, String request) {
-        this.customer = user;
-        this.address = address;
+    public Order(Long userId, UUID addressId, UUID storeId, Integer totalPrice, String request) {
+        this.customerId = userId;
+        this.addressId = addressId;
         this.storeId = storeId;
         validTotalPrice(totalPrice);
         this.totalPrice = totalPrice;

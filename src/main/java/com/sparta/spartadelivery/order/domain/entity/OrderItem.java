@@ -3,6 +3,7 @@ package com.sparta.spartadelivery.order.domain.entity;
 import com.sparta.spartadelivery.order.domain.entity.Order;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedBy;
@@ -27,11 +28,8 @@ public class OrderItem {
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
-    /*
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "menu_id", nullable = false)
-    private Menu menu;
-     */
+    @Column(nullable = false)
+    private UUID menuId;
 
     private Integer quantity;
 
@@ -46,9 +44,18 @@ public class OrderItem {
     @Column(updatable = false, length = 100)
     private String createdBy;
 
-    /*
-    // 내부 메서드 - 이는 수정 가능성이 있습니다.
-    protected void setOrder(Order order) {
+    @Builder
+    private OrderItem(Order order, UUID menuId, Integer quantity, Integer unitPrice) {
+        validateQuantity(quantity);
         this.order = order;
-     */
+        this.menuId = menuId;
+        this.quantity = quantity;
+        this.unitPrice = unitPrice;
+    }
+
+    private void validateQuantity(Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            throw new IllegalArgumentException("구매 수량은 0보다 커야 합니다.");
+        }
+    }
 }

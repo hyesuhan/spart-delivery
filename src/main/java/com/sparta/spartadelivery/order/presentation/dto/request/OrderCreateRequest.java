@@ -25,5 +25,7 @@ public record OrderCreateRequest(
         List<OrderItemRequest> orderItems
 ) {
 
+        public static Order toEntity(OrderCreateRequest request, )
+
 
 }
