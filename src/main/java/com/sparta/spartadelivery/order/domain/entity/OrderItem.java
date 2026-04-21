@@ -26,11 +26,11 @@ public class OrderItem {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "order_id", nullable = false)
-    private UUID orderId;
-
     @Column(nullable = false)
     private UUID menuId;
+
+    @Column(nullable = false)
+    private String menuName;
 
     @Column(nullable = false)
     private Integer quantity;
@@ -46,18 +46,40 @@ public class OrderItem {
     @Column(updatable = false, length = 100)
     private String createdBy;
 
-    @Builder
-    public OrderItem(UUID orderId, UUID menuId, Integer quantity, Integer unitPrice) {
+    public static OrderItem create(UUID menuId, String menuName, Integer quantity, Integer unitPrice) {
         validateQuantity(quantity);
-        this.orderId = orderId;
+        validateUnitPrice(unitPrice);
+        return OrderItem.builder()
+                .menuId(menuId)
+                .menuName(menuName)
+                .quantity(quantity)
+                .unitPrice(unitPrice)
+                .build();
+    }
+
+    @Builder
+    private OrderItem(UUID menuId, String menuName, Integer quantity, Integer unitPrice) {
         this.menuId = menuId;
+        this.menuName = menuName;
         this.quantity = quantity;
         this.unitPrice = unitPrice;
     }
 
-    private void validateQuantity(Integer quantity) {
+    public int getSubTotal() {
+        return this.unitPrice * this.quantity;
+    }
+
+    //** validator **//
+
+    private static void validateQuantity(Integer quantity) {
         if (quantity == null || quantity <= 0) {
             throw new AppException(OrderErrorCode.INVALID_QUANTITY);
+        }
+    }
+
+    private static void validateUnitPrice(Integer unitPrice) {
+        if (unitPrice == null || unitPrice < 0) {
+            throw new AppException(OrderErrorCode.TOTAL_PRICE_OVER_ZERO);
         }
     }
 

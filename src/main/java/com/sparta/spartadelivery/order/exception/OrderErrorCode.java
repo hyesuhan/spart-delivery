@@ -18,8 +18,8 @@ public enum OrderErrorCode implements BaseErrorCode {
 
     // Order Item 관련
 
-    INVALID_QUANTITY(HttpStatus.BAD_REQUEST, "주문 수량은 0보다 커야 합니다.")
-
+    INVALID_QUANTITY(HttpStatus.BAD_REQUEST, "주문 수량은 0보다 커야 합니다."),
+    ORDER_ITEMS_EMPTY(HttpStatus.BAD_REQUEST, "주문 추가 내역이 없습니다.")
     ;
 
     private final HttpStatus status;

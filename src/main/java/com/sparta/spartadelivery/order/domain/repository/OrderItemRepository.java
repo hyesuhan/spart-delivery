@@ -8,7 +8,4 @@ import java.util.UUID;
 
 public interface OrderItemRepository extends JpaRepository<OrderItem, UUID> {
 
-    List<OrderItem> findAllByOrderId(UUID orderId);
-
-    // List<OrderItem> saveAll(Iterable<OrderItem> orderitems);
 }
