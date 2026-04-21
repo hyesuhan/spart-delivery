@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -54,6 +55,28 @@ public class AreaController {
         AreaDetailResponse response = areaService.createArea(request, userPrincipal);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED.value(), "CREATED", response));
+    }
+
+    @Operation(
+            summary = "운영 지역 상세 조회 API",
+            description = """
+                    운영 지역 상세 정보를 조회합니다.
+
+                    **요청 가능 권한**
+
+                    - ALL
+
+                    **처리 정책**
+
+                    - 삭제되지 않은 운영 지역만 조회할 수 있습니다.
+                    """
+    )
+    @GetMapping("/{areaId}")
+    public ResponseEntity<ApiResponse<AreaDetailResponse>> getArea(
+            @PathVariable UUID areaId
+    ) {
+        AreaDetailResponse response = areaService.getArea(areaId);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 
     @Operation(
