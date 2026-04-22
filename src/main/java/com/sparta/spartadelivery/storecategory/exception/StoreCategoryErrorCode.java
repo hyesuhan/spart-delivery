@@ -20,6 +20,9 @@ public enum StoreCategoryErrorCode implements BaseErrorCode {
     // 가게 카테고리 상세 조회 API 관련 에러 코드
     STORE_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "가게 카테고리를 찾을 수 없습니다."),
 
+    // 가게 카테고리 수정 API 관련 에러 코드
+    STORE_CATEGORY_UPDATE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "가게 카테고리를 수정할 권한이 없습니다."),
+
     // 가게 카테고리 삭제 API 관련 에러 코드
     STORE_CATEGORY_DELETE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "가게 카테고리를 삭제할 권한이 없습니다.");
 
