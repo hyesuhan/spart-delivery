@@ -15,6 +15,7 @@ import com.sparta.spartadelivery.storecategory.domain.repository.StoreCategoryRe
 import com.sparta.spartadelivery.storecategory.exception.StoreCategoryErrorCode;
 import com.sparta.spartadelivery.storecategory.presentation.dto.request.StoreCategoryCreateRequest;
 import com.sparta.spartadelivery.user.domain.entity.Role;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -113,6 +117,91 @@ class StoreCategoryServiceTest {
                 .isEqualTo(StoreCategoryErrorCode.DUPLICATE_STORE_CATEGORY_NAME);
 
         verify(storeCategoryRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("가게 카테고리 목록을 페이지네이션으로 조회할 수 있다")
+    void getStoreCategories() {
+        StoreCategory first = storeCategory("한식");
+        StoreCategory second = storeCategory("치킨");
+        PageRequest pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        when(storeCategoryRepository.findAllByDeletedAtIsNull(pageable))
+                .thenReturn(new PageImpl<>(List.of(first, second), pageable, 2));
+
+        var response = storeCategoryService.getStoreCategories(0, 10, null);
+
+        assertThat(response.content()).hasSize(2);
+        assertThat(response.content().get(0).name()).isEqualTo("한식");
+        assertThat(response.content().get(1).name()).isEqualTo("치킨");
+        assertThat(response.page()).isEqualTo(0);
+        assertThat(response.size()).isEqualTo(10);
+        assertThat(response.totalElements()).isEqualTo(2);
+        assertThat(response.sort()).isEqualTo("createdAt,DESC");
+    }
+
+    @Test
+    @DisplayName("가게 카테고리 목록 조회 결과가 없으면 빈 목록을 반환한다")
+    void getStoreCategoriesWithEmptyContent() {
+        PageRequest pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        when(storeCategoryRepository.findAllByDeletedAtIsNull(pageable))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+
+        var response = storeCategoryService.getStoreCategories(0, 10, null);
+
+        assertThat(response.content()).isEmpty();
+        assertThat(response.totalElements()).isZero();
+        assertThat(response.totalPages()).isZero();
+    }
+
+    @Test
+    @DisplayName("페이지 번호가 0보다 작으면 가게 카테고리 목록을 조회할 수 없다")
+    void getStoreCategoriesWithInvalidPageNumber() {
+        assertThatThrownBy(() -> storeCategoryService.getStoreCategories(-1, 10, null))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(StoreCategoryErrorCode.STORE_CATEGORY_LIST_INVALID_PAGE_NUMBER);
+    }
+
+    @Test
+    @DisplayName("페이지 크기가 허용 범위를 벗어나면 가게 카테고리 목록을 조회할 수 없다")
+    void getStoreCategoriesWithInvalidPageSize() {
+        assertThatThrownBy(() -> storeCategoryService.getStoreCategories(0, 20, null))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(StoreCategoryErrorCode.STORE_CATEGORY_LIST_INVALID_PAGE_SIZE);
+    }
+
+    @Test
+    @DisplayName("정렬 조건 형식이 올바르지 않으면 가게 카테고리 목록을 조회할 수 없다")
+    void getStoreCategoriesWithInvalidSortFormat() {
+        assertThatThrownBy(() -> storeCategoryService.getStoreCategories(0, 10, "createdAt"))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(StoreCategoryErrorCode.STORE_CATEGORY_LIST_INVALID_SORT_FORMAT);
+    }
+
+    @Test
+    @DisplayName("지원하지 않는 정렬 필드면 가게 카테고리 목록을 조회할 수 없다")
+    void getStoreCategoriesWithUnsupportedSortProperty() {
+        assertThatThrownBy(() -> storeCategoryService.getStoreCategories(0, 10, "id,DESC"))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(StoreCategoryErrorCode.STORE_CATEGORY_LIST_UNSUPPORTED_SORT_PROPERTY);
+    }
+
+    @Test
+    @DisplayName("지원하지 않는 정렬 방향이면 가게 카테고리 목록을 조회할 수 없다")
+    void getStoreCategoriesWithUnsupportedSortDirection() {
+        assertThatThrownBy(() -> storeCategoryService.getStoreCategories(0, 10, "createdAt,DOWN"))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(StoreCategoryErrorCode.STORE_CATEGORY_LIST_UNSUPPORTED_SORT_DIRECTION);
+    }
+
+    private StoreCategory storeCategory(String name) {
+        return StoreCategory.builder()
+                .name(name)
+                .build();
     }
 
     private UserPrincipal principal(Role role) {
