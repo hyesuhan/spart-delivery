@@ -14,4 +14,6 @@ public interface AreaRepository extends JpaRepository<Area, UUID> {
     Optional<Area> findByIdAndDeletedAtIsNull(UUID id);
 
     Page<Area> findAllByDeletedAtIsNull(Pageable pageable);
+
+    Page<Area> findAllByDeletedAtIsNullAndActive(boolean active, Pageable pageable);
 }

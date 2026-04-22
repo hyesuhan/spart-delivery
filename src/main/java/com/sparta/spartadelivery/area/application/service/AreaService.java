@@ -29,7 +29,6 @@ public class AreaService {
             "name",
             "city",
             "district",
-            "active",
             "createdAt",
             "updatedAt"
     );
@@ -59,10 +58,10 @@ public class AreaService {
         return AreaDetailResponse.from(areaRepository.save(area));
     }
 
-    public AreaPageResponse getAreas(int page, int size, String sort) {
+    public AreaPageResponse getAreas(int page, int size, String sort, Boolean active) {
         String normalizedSort = normalizeSort(sort);
         Pageable pageable = createPageable(page, size, normalizedSort);
-        return AreaPageResponse.from(areaRepository.findAllByDeletedAtIsNull(pageable), normalizedSort);
+        return AreaPageResponse.from(findAreas(active, pageable), normalizedSort);
     }
 
     public AreaDetailResponse getArea(UUID areaId) {
@@ -132,6 +131,13 @@ public class AreaService {
         if (areaRepository.existsByNameAndDeletedAtIsNull(name)) {
             throw new AppException(AreaErrorCode.DUPLICATE_AREA_NAME);
         }
+    }
+
+    private org.springframework.data.domain.Page<Area> findAreas(Boolean active, Pageable pageable) {
+        if (active == null) {
+            return areaRepository.findAllByDeletedAtIsNull(pageable);
+        }
+        return areaRepository.findAllByDeletedAtIsNullAndActive(active, pageable);
     }
 
     private String normalizeSort(String sort) {

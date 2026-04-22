@@ -72,6 +72,7 @@ public class AreaController {
                     **처리 정책**
 
                     - 삭제되지 않은 운영 지역만 조회할 수 있습니다.
+                    - active 파라미터를 전달하면 활성 여부로 목록을 필터링할 수 있습니다.
                     - 기본 정렬은 createdAt,DESC 입니다.
                     - size는 10, 30, 50 중 하나만 사용할 수 있습니다.
                     """
@@ -82,10 +83,12 @@ public class AreaController {
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "페이지 크기", example = "10")
             @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "활성 여부 필터", example = "true")
+            @RequestParam(required = false) Boolean active,
             @Parameter(description = "정렬 조건", example = "createdAt,DESC")
             @RequestParam(required = false) String sort
     ) {
-        AreaPageResponse response = areaService.getAreas(page, size, sort);
+        AreaPageResponse response = areaService.getAreas(page, size, sort, active);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 

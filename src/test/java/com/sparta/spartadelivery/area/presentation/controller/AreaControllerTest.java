@@ -18,6 +18,7 @@ import com.sparta.spartadelivery.area.exception.AreaErrorCode;
 import com.sparta.spartadelivery.area.presentation.dto.request.AreaCreateRequest;
 import com.sparta.spartadelivery.area.presentation.dto.request.AreaUpdateRequest;
 import com.sparta.spartadelivery.area.presentation.dto.response.AreaDetailResponse;
+import com.sparta.spartadelivery.area.presentation.dto.response.AreaListResponse;
 import com.sparta.spartadelivery.area.presentation.dto.response.AreaPageResponse;
 import com.sparta.spartadelivery.global.exception.AppException;
 import com.sparta.spartadelivery.global.infrastructure.config.security.JwtAuthenticationFilter;
@@ -148,7 +149,7 @@ class AreaControllerTest {
         AreaPageResponse response = new AreaPageResponse(
                 List.of(
                         areaListResponse("Gwanghwamun", "Seoul", "Jongno-gu", true),
-                        areaListResponse("Jamsil", "Seoul", "Songpa-gu", true)
+                        areaListResponse("Jamsil", "Seoul", "Songpa-gu", false)
                 ),
                 0,
                 10,
@@ -156,7 +157,7 @@ class AreaControllerTest {
                 1,
                 "createdAt,DESC"
         );
-        given(areaService.getAreas(0, 10, null)).willReturn(response);
+        given(areaService.getAreas(0, 10, null, null)).willReturn(response);
 
         mockMvc.perform(get("/api/v1/areas")
                         .with(authentication(managerToken)))
@@ -173,9 +174,30 @@ class AreaControllerTest {
     }
 
     @Test
+    @DisplayName("운영 지역 목록 조회 시 활성 여부 필터를 적용할 수 있다")
+    void getAreasWithActiveFilter() throws Exception {
+        AreaPageResponse response = new AreaPageResponse(
+                List.of(areaListResponse("Gwanghwamun", "Seoul", "Jongno-gu", true)),
+                0,
+                10,
+                1,
+                1,
+                "createdAt,DESC"
+        );
+        given(areaService.getAreas(0, 10, null, true)).willReturn(response);
+
+        mockMvc.perform(get("/api/v1/areas")
+                        .with(authentication(managerToken))
+                        .param("active", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()").value(1))
+                .andExpect(jsonPath("$.data.content[0].active").value(true));
+    }
+
+    @Test
     @DisplayName("운영 지역 목록 조회 시 잘못된 페이지 번호면 400을 반환한다")
     void getAreasWithInvalidPageNumber() throws Exception {
-        given(areaService.getAreas(-1, 10, null))
+        given(areaService.getAreas(-1, 10, null, null))
                 .willThrow(new AppException(AreaErrorCode.AREA_LIST_INVALID_PAGE_NUMBER));
 
         mockMvc.perform(get("/api/v1/areas")
@@ -330,13 +352,8 @@ class AreaControllerTest {
         );
     }
 
-    private com.sparta.spartadelivery.area.presentation.dto.response.AreaListResponse areaListResponse(
-            String name,
-            String city,
-            String district,
-            boolean active
-    ) {
-        return new com.sparta.spartadelivery.area.presentation.dto.response.AreaListResponse(
+    private AreaListResponse areaListResponse(String name, String city, String district, boolean active) {
+        return new AreaListResponse(
                 UUID.randomUUID(),
                 name,
                 city,
