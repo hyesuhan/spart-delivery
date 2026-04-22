@@ -16,6 +16,7 @@ import com.sparta.spartadelivery.area.presentation.dto.request.AreaUpdateRequest
 import com.sparta.spartadelivery.global.exception.AppException;
 import com.sparta.spartadelivery.global.infrastructure.config.security.UserPrincipal;
 import com.sparta.spartadelivery.user.domain.entity.Role;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +26,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -76,13 +79,13 @@ class AreaServiceTest {
         // when
         var response = areaService.createArea(request, requester);
 
-        // then: active 값이 생략되면 엔티티 기본값인 true로 등록된다.
+        // then: active 값이 생략되면 엔티티는 기본값인 true로 등록된다.
         verify(areaRepository).save(any(Area.class));
         assertThat(response.active()).isTrue();
     }
 
     @Test
-    @DisplayName("운영 지역 등록 요청값은 중복 검증과 저장 전에 앞뒤 공백이 제거된다")
+    @DisplayName("운영 지역 등록 요청값은 중복 검증과 저장 전에 앞뒤 공백을 제거한다")
     void createAreaWithTrimmedValues() {
         // given: 앞뒤 공백이 포함된 요청값을 준비한다.
         AreaCreateRequest request = new AreaCreateRequest(" Gwanghwamun ", " Seoul ", " Jongno-gu ", true);
@@ -110,7 +113,7 @@ class AreaServiceTest {
         AreaCreateRequest request = new AreaCreateRequest("Gwanghwamun", "Seoul", "Jongno-gu", true);
         UserPrincipal requester = principal(Role.CUSTOMER);
 
-        // when & then: 권한 예외가 발생하고 중복 검증 및 저장은 수행되지 않는다.
+        // when & then: 권한 예외가 발생하고 중복 검증과 저장은 수행되지 않는다.
         assertThatThrownBy(() -> areaService.createArea(request, requester))
                 .isInstanceOf(AppException.class)
                 .extracting("errorCode")
@@ -135,6 +138,97 @@ class AreaServiceTest {
                 .isEqualTo(AreaErrorCode.DUPLICATE_AREA_NAME);
 
         verify(areaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("운영 지역 목록을 페이지네이션으로 조회할 수 있다")
+    void getAreas() {
+        // given: 삭제되지 않은 운영 지역 목록이 조회된다.
+        Area first = area("Gwanghwamun", "Seoul", "Jongno-gu", true);
+        Area second = area("Jamsil", "Seoul", "Songpa-gu", true);
+        when(areaRepository.findAllByDeletedAtIsNull(PageRequest.of(0, 10,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"))))
+                .thenReturn(new PageImpl<>(List.of(first, second),
+                        PageRequest.of(0, 10,
+                                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")),
+                        2));
+
+        // when
+        var response = areaService.getAreas(0, 10, null);
+
+        // then
+        assertThat(response.content()).hasSize(2);
+        assertThat(response.content().get(0).name()).isEqualTo("Gwanghwamun");
+        assertThat(response.content().get(1).district()).isEqualTo("Songpa-gu");
+        assertThat(response.page()).isEqualTo(0);
+        assertThat(response.size()).isEqualTo(10);
+        assertThat(response.totalElements()).isEqualTo(2);
+        assertThat(response.sort()).isEqualTo("createdAt,DESC");
+    }
+
+    @Test
+    @DisplayName("운영 지역 목록 조회 결과가 없으면 빈 목록을 반환한다")
+    void getAreasWithEmptyContent() {
+        // given
+        when(areaRepository.findAllByDeletedAtIsNull(PageRequest.of(0, 10,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"))))
+                .thenReturn(new PageImpl<>(List.of(),
+                        PageRequest.of(0, 10,
+                                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")),
+                        0));
+
+        // when
+        var response = areaService.getAreas(0, 10, null);
+
+        // then
+        assertThat(response.content()).isEmpty();
+        assertThat(response.totalElements()).isZero();
+        assertThat(response.totalPages()).isZero();
+    }
+
+    @Test
+    @DisplayName("페이지 번호가 0보다 작으면 운영 지역 목록을 조회할 수 없다")
+    void getAreasWithInvalidPageNumber() {
+        assertThatThrownBy(() -> areaService.getAreas(-1, 10, null))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(AreaErrorCode.AREA_LIST_INVALID_PAGE_NUMBER);
+    }
+
+    @Test
+    @DisplayName("페이지 크기가 허용 범위를 벗어나면 운영 지역 목록을 조회할 수 없다")
+    void getAreasWithInvalidPageSize() {
+        assertThatThrownBy(() -> areaService.getAreas(0, 20, null))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(AreaErrorCode.AREA_LIST_INVALID_PAGE_SIZE);
+    }
+
+    @Test
+    @DisplayName("정렬 조건 형식이 올바르지 않으면 운영 지역 목록을 조회할 수 없다")
+    void getAreasWithInvalidSortFormat() {
+        assertThatThrownBy(() -> areaService.getAreas(0, 10, "createdAt"))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(AreaErrorCode.AREA_LIST_INVALID_SORT_FORMAT);
+    }
+
+    @Test
+    @DisplayName("지원하지 않는 정렬 필드면 운영 지역 목록을 조회할 수 없다")
+    void getAreasWithUnsupportedSortProperty() {
+        assertThatThrownBy(() -> areaService.getAreas(0, 10, "id,DESC"))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(AreaErrorCode.AREA_LIST_UNSUPPORTED_SORT_PROPERTY);
+    }
+
+    @Test
+    @DisplayName("지원하지 않는 정렬 방향이면 운영 지역 목록을 조회할 수 없다")
+    void getAreasWithUnsupportedSortDirection() {
+        assertThatThrownBy(() -> areaService.getAreas(0, 10, "createdAt,DOWN"))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(AreaErrorCode.AREA_LIST_UNSUPPORTED_SORT_DIRECTION);
     }
 
     @Test
@@ -211,7 +305,7 @@ class AreaServiceTest {
     }
 
     @Test
-    @DisplayName("운영 지역 수정 요청값은 저장 전에 앞뒤 공백이 제거된다")
+    @DisplayName("운영 지역 수정 요청값은 저장 전에 앞뒤 공백을 제거한다")
     void updateAreaWithTrimmedValues() {
         // given
         UUID areaId = UUID.randomUUID();
@@ -284,7 +378,7 @@ class AreaServiceTest {
     }
 
     @Test
-    @DisplayName("수정 대상 운영 지역이 없으면 수정할 수 없다")
+    @DisplayName("수정할 운영 지역이 없으면 수정할 수 없다")
     void updateAreaNotFound() {
         // given
         UUID areaId = UUID.randomUUID();
@@ -329,7 +423,7 @@ class AreaServiceTest {
         // when
         areaService.deleteArea(areaId, requester);
 
-        // then: 삭제자와 삭제 시간이 기록된다.
+        // then: 삭제자와 삭제 시각이 기록된다.
         assertThat(area.isDeleted()).isTrue();
         assertThat(area.getDeletedBy()).isEqualTo("manager01");
     }
@@ -367,7 +461,7 @@ class AreaServiceTest {
     }
 
     @Test
-    @DisplayName("삭제 대상 운영 지역이 없으면 삭제할 수 없다")
+    @DisplayName("삭제할 운영 지역이 없으면 삭제할 수 없다")
     void deleteAreaNotFound() {
         // given: areaId에 해당하는 미삭제 운영 지역이 없다.
         UUID areaId = UUID.randomUUID();
