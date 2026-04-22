@@ -4,6 +4,7 @@ import com.sparta.spartadelivery.global.infrastructure.config.security.UserPrinc
 import com.sparta.spartadelivery.global.presentation.dto.ApiResponse;
 import com.sparta.spartadelivery.storecategory.application.service.StoreCategoryService;
 import com.sparta.spartadelivery.storecategory.presentation.dto.request.StoreCategoryCreateRequest;
+import com.sparta.spartadelivery.storecategory.presentation.dto.request.StoreCategoryUpdateRequest;
 import com.sparta.spartadelivery.storecategory.presentation.dto.response.StoreCategoryDetailResponse;
 import com.sparta.spartadelivery.storecategory.presentation.dto.response.StoreCategoryPageResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,6 +19,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -111,6 +113,32 @@ public class StoreCategoryController {
             @PathVariable UUID storeCategoryId
     ) {
         StoreCategoryDetailResponse response = storeCategoryService.getStoreCategory(storeCategoryId);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
+    }
+
+    @Operation(
+            summary = "가게 카테고리 수정 API",
+            description = """
+                    가게 카테고리 정보를 수정합니다.
+
+                    **요청 가능 권한**
+
+                    - MANAGER
+                    - MASTER
+
+                    **처리 정책**
+
+                    - 삭제되지 않은 가게 카테고리만 수정할 수 있습니다.
+                    - 이름이 변경되는 경우 삭제되지 않은 가게 카테고리 기준으로 중복 검증을 수행합니다.
+                    """
+    )
+    @PutMapping("/{storeCategoryId}")
+    public ResponseEntity<ApiResponse<StoreCategoryDetailResponse>> updateStoreCategory(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @PathVariable UUID storeCategoryId,
+            @Valid @RequestBody StoreCategoryUpdateRequest request
+    ) {
+        StoreCategoryDetailResponse response = storeCategoryService.updateStoreCategory(storeCategoryId, request, userPrincipal);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 }
