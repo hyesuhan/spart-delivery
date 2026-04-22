@@ -7,7 +7,6 @@ import com.sparta.spartadelivery.user.domain.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 
-import java.util.Objects;
 import java.util.UUID;
 
 @Getter
@@ -60,26 +59,35 @@ public class Review extends BaseEntity {
 //            throw new IllegalStateException("주문자와 리뷰 작성자가 일치하지 않으면 리뷰 생성할 수 없습니다");
 //        }
 
-        if (isOutOfRange(rating)) {
-            throw new IllegalArgumentException(String.format("리뷰 점수는 %d부터 %d까지 입력할 수 있습니다.", MIN_RATING, MAX_RATING));
-        }
+//        if (isOutOfRange(rating)) {
+//            throw new IllegalArgumentException(String.format("리뷰 점수는 %d부터 %d까지 입력할 수 있습니다.", MIN_RATING, MAX_RATING));
+//        }
 
 //        if (order.getStatus() != OrderStatus.COMPLETED) {
 //            throw new IllegalStateException("주문이 완료되지 않은 경우 리뷰를 생성할 수 없습니다");
 //        }
     }
 
-//    public void update(Long userId, int rating, String content) {
-//        validate();
-//        if (this.customer.getId().equals(userId)) {
-//            this.rating = rating;
-//            this.content = content;
-//        }
-//        throw new IllegalArgumentException("리뷰 작성자만 수정 가능합니다");
-//    }
+    public void update(Long loginUserId, int rating, String content) {
+        verifyCustomer(loginUserId);
+        validateRating(rating);
+        this.rating = rating;
+        this.content = content;
+    }
 
     public void delete(String userName) {
         super.markDeleted(userName);
+    }
+
+    private void verifyCustomer(Long loginUserId) {
+        if (!loginUserId.equals(this.customer.getId())) {
+            throw new IllegalArgumentException("리뷰 작성자만 수정 가능합니다");
+        }
+    }
+
+    private void validateRating(int rating) {
+        if (isOutOfRange(rating))
+            throw new IllegalArgumentException(String.format("리뷰 점수는 %d부터 %d까지 입력할 수 있습니다.", MIN_RATING, MAX_RATING));
     }
 
     private boolean isOutOfRange(int rating) {
