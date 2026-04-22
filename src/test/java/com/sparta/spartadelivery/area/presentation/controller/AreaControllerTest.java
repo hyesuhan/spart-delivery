@@ -18,12 +18,14 @@ import com.sparta.spartadelivery.area.exception.AreaErrorCode;
 import com.sparta.spartadelivery.area.presentation.dto.request.AreaCreateRequest;
 import com.sparta.spartadelivery.area.presentation.dto.request.AreaUpdateRequest;
 import com.sparta.spartadelivery.area.presentation.dto.response.AreaDetailResponse;
+import com.sparta.spartadelivery.area.presentation.dto.response.AreaPageResponse;
 import com.sparta.spartadelivery.global.exception.AppException;
 import com.sparta.spartadelivery.global.infrastructure.config.security.JwtAuthenticationFilter;
 import com.sparta.spartadelivery.global.infrastructure.config.security.JwtTokenProvider;
 import com.sparta.spartadelivery.global.infrastructure.config.security.UserPrincipal;
 import com.sparta.spartadelivery.user.domain.entity.Role;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -96,7 +98,7 @@ class AreaControllerTest {
     @DisplayName("운영 지역 등록 성공 시 201 CREATED를 반환한다")
     void createArea() throws Exception {
         AreaCreateRequest request = new AreaCreateRequest("Gwanghwamun", "Seoul", "Jongno-gu", true);
-        AreaDetailResponse response = areaResponse("Gwanghwamun", "Seoul", "Jongno-gu", true);
+        AreaDetailResponse response = areaDetailResponse("Gwanghwamun", "Seoul", "Jongno-gu", true);
         given(areaService.createArea(any(AreaCreateRequest.class), any(UserPrincipal.class))).willReturn(response);
 
         mockMvc.perform(post("/api/v1/areas")
@@ -141,10 +143,53 @@ class AreaControllerTest {
     }
 
     @Test
+    @DisplayName("운영 지역 목록 조회 성공 시 200 OK를 반환한다")
+    void getAreas() throws Exception {
+        AreaPageResponse response = new AreaPageResponse(
+                List.of(
+                        areaListResponse("Gwanghwamun", "Seoul", "Jongno-gu", true),
+                        areaListResponse("Jamsil", "Seoul", "Songpa-gu", true)
+                ),
+                0,
+                10,
+                2,
+                1,
+                "createdAt,DESC"
+        );
+        given(areaService.getAreas(0, 10, null)).willReturn(response);
+
+        mockMvc.perform(get("/api/v1/areas")
+                        .with(authentication(managerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.content.length()").value(2))
+                .andExpect(jsonPath("$.data.content[0].name").value("Gwanghwamun"))
+                .andExpect(jsonPath("$.data.content[1].district").value("Songpa-gu"))
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(10))
+                .andExpect(jsonPath("$.data.totalElements").value(2))
+                .andExpect(jsonPath("$.data.sort").value("createdAt,DESC"));
+    }
+
+    @Test
+    @DisplayName("운영 지역 목록 조회 시 잘못된 페이지 번호면 400을 반환한다")
+    void getAreasWithInvalidPageNumber() throws Exception {
+        given(areaService.getAreas(-1, 10, null))
+                .willThrow(new AppException(AreaErrorCode.AREA_LIST_INVALID_PAGE_NUMBER));
+
+        mockMvc.perform(get("/api/v1/areas")
+                        .with(authentication(managerToken))
+                        .param("page", "-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("페이지 번호는 0 이상이어야 합니다."));
+    }
+
+    @Test
     @DisplayName("운영 지역 상세 조회 성공 시 200 OK를 반환한다")
     void getArea() throws Exception {
         UUID areaId = UUID.randomUUID();
-        AreaDetailResponse response = areaResponse("Gwanghwamun", "Seoul", "Jongno-gu", true);
+        AreaDetailResponse response = areaDetailResponse("Gwanghwamun", "Seoul", "Jongno-gu", true);
         given(areaService.getArea(any(UUID.class))).willReturn(response);
 
         mockMvc.perform(get("/api/v1/areas/{areaId}", areaId)
@@ -175,7 +220,7 @@ class AreaControllerTest {
     void updateArea() throws Exception {
         UUID areaId = UUID.randomUUID();
         AreaUpdateRequest request = new AreaUpdateRequest("Jongno", "Seoul", "Jongno-gu", false);
-        AreaDetailResponse response = areaResponse("Jongno", "Seoul", "Jongno-gu", false);
+        AreaDetailResponse response = areaDetailResponse("Jongno", "Seoul", "Jongno-gu", false);
         given(areaService.updateArea(any(UUID.class), any(AreaUpdateRequest.class), any(UserPrincipal.class)))
                 .willReturn(response);
 
@@ -274,8 +319,24 @@ class AreaControllerTest {
                 .andExpect(jsonPath("$.message").value("운영 지역을 찾을 수 없습니다."));
     }
 
-    private AreaDetailResponse areaResponse(String name, String city, String district, boolean active) {
+    private AreaDetailResponse areaDetailResponse(String name, String city, String district, boolean active) {
         return new AreaDetailResponse(
+                UUID.randomUUID(),
+                name,
+                city,
+                district,
+                active,
+                LocalDateTime.now()
+        );
+    }
+
+    private com.sparta.spartadelivery.area.presentation.dto.response.AreaListResponse areaListResponse(
+            String name,
+            String city,
+            String district,
+            boolean active
+    ) {
+        return new com.sparta.spartadelivery.area.presentation.dto.response.AreaListResponse(
                 UUID.randomUUID(),
                 name,
                 city,
