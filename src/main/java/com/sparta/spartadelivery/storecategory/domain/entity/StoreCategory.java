@@ -1,4 +1,4 @@
-package com.sparta.spartadelivery.category.domain.entity;
+package com.sparta.spartadelivery.storecategory.domain.entity;
 
 import com.sparta.spartadelivery.global.entity.BaseEntity;
 import jakarta.persistence.Column;
@@ -15,20 +15,20 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Table(name = "p_category")
+@Table(name = "p_store_category")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Category extends BaseEntity {
+public class StoreCategory extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "category_id")
+    @Column(name = "store_category_id")
     private UUID id;
 
     @Column(name = "name", length = 50, nullable = false, unique = true)
     private String name;
 
     @Builder
-    private Category(String name) {
+    private StoreCategory(String name) {
         this.name = name;
     }
 
