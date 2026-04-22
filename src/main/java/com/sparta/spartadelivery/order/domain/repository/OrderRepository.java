@@ -8,6 +8,6 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface OrderRepository extends JpaRepository<Order, UUID> {
+public interface OrderRepository extends JpaRepository<Order, UUID>, OrderQueryRepository {
     Optional<Order> findByIdAndDeletedAtIsNull(UUID orderId);
 }
