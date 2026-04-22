@@ -2,6 +2,7 @@ package com.sparta.spartadelivery.review.service;
 
 import com.sparta.spartadelivery.review.domain.entity.Review;
 import com.sparta.spartadelivery.review.domain.repository.ReviewRepository;
+import com.sparta.spartadelivery.review.presentation.dto.ReviewDeletedInfoDto;
 import com.sparta.spartadelivery.review.presentation.dto.ReviewDetailDto;
 import com.sparta.spartadelivery.review.presentation.dto.ReviewUpdateRequest;
 import lombok.RequiredArgsConstructor;
@@ -28,9 +29,9 @@ public class ReviewService {
     }
 
     @Transactional
-    public void delete(UUID reviewId, String deletedBy) {
+    public void delete(UUID reviewId, ReviewDeletedInfoDto deletedInfo) {
         Review review = reviewRepository.getReferenceById(reviewId);
-        review.delete(deletedBy);
+        review.delete(deletedInfo.loginId(), deletedInfo.userName());
     }
 
 }

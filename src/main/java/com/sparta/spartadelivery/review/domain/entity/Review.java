@@ -75,7 +75,8 @@ public class Review extends BaseEntity {
         this.content = content;
     }
 
-    public void delete(String userName) {
+    public void delete(Long loginUserId, String userName) {
+        verifyCustomer(loginUserId);
         super.markDeleted(userName);
     }
 
