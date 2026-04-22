@@ -10,11 +10,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -87,6 +89,28 @@ public class StoreCategoryController {
             @RequestParam(required = false) String sort
     ) {
         StoreCategoryPageResponse response = storeCategoryService.getStoreCategories(page, size, sort);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
+    }
+
+    @Operation(
+            summary = "가게 카테고리 상세 조회 API",
+            description = """
+                    가게 카테고리의 상세 정보를 조회합니다.
+
+                    **요청 가능 권한**
+
+                    - ALL
+
+                    **처리 정책**
+
+                    - 삭제되지 않은 가게 카테고리만 조회할 수 있습니다.
+                    """
+    )
+    @GetMapping("/{storeCategoryId}")
+    public ResponseEntity<ApiResponse<StoreCategoryDetailResponse>> getStoreCategory(
+            @PathVariable UUID storeCategoryId
+    ) {
+        StoreCategoryDetailResponse response = storeCategoryService.getStoreCategory(storeCategoryId);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 }
