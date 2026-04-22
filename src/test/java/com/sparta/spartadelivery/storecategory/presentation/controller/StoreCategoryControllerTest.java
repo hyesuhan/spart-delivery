@@ -177,6 +177,34 @@ class StoreCategoryControllerTest {
                 .andExpect(jsonPath("$.message").value("페이지 번호는 0 이상이어야 합니다."));
     }
 
+    @Test
+    @DisplayName("가게 카테고리 상세 조회 성공 시 200 OK를 반환한다")
+    void getStoreCategory() throws Exception {
+        UUID storeCategoryId = UUID.randomUUID();
+        StoreCategoryDetailResponse response = storeCategoryResponse("한식");
+        given(storeCategoryService.getStoreCategory(any(UUID.class))).willReturn(response);
+
+        mockMvc.perform(get("/api/v1/store-categories/{storeCategoryId}", storeCategoryId)
+                        .with(authentication(managerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.name").value("한식"));
+    }
+
+    @Test
+    @DisplayName("상세 조회 대상 가게 카테고리가 없으면 404를 반환한다")
+    void getStoreCategoryNotFound() throws Exception {
+        UUID storeCategoryId = UUID.randomUUID();
+        given(storeCategoryService.getStoreCategory(any(UUID.class)))
+                .willThrow(new AppException(StoreCategoryErrorCode.STORE_CATEGORY_NOT_FOUND));
+
+        mockMvc.perform(get("/api/v1/store-categories/{storeCategoryId}", storeCategoryId)
+                        .with(authentication(managerToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("가게 카테고리를 찾을 수 없습니다."));
+    }
+
     private StoreCategoryDetailResponse storeCategoryResponse(String name) {
         return new StoreCategoryDetailResponse(
                 UUID.randomUUID(),
