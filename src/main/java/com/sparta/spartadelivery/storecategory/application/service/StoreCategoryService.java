@@ -10,6 +10,7 @@ import com.sparta.spartadelivery.storecategory.presentation.dto.response.StoreCa
 import com.sparta.spartadelivery.storecategory.presentation.dto.response.StoreCategoryPageResponse;
 import com.sparta.spartadelivery.user.domain.entity.Role;
 import java.util.Set;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -56,6 +57,12 @@ public class StoreCategoryService {
                 storeCategoryRepository.findAllByDeletedAtIsNull(pageable),
                 normalizedSort
         );
+    }
+
+    public StoreCategoryDetailResponse getStoreCategory(UUID storeCategoryId) {
+        StoreCategory storeCategory = storeCategoryRepository.findByIdAndDeletedAtIsNull(storeCategoryId)
+                .orElseThrow(() -> new AppException(StoreCategoryErrorCode.STORE_CATEGORY_NOT_FOUND));
+        return StoreCategoryDetailResponse.from(storeCategory);
     }
 
     private void validateCreatePermission(UserPrincipal requester) {
