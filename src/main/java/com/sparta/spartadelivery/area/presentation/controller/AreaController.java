@@ -75,17 +75,24 @@ public class AreaController {
                     - active 파라미터를 전달하면 활성 여부로 목록을 필터링할 수 있습니다.
                     - 기본 정렬은 createdAt,DESC 입니다.
                     - size는 10, 30, 50 중 하나만 사용할 수 있습니다.
+                    - sort는 `{필드명},{정렬방향}` 형식으로 전달합니다.
+                    - 정렬 가능 필드: `name`, `city`, `district`, `createdAt`, `updatedAt`
+                    - 정렬 방향: `ASC`, `DESC`
+                    - 예시: `name,ASC`, `createdAt,DESC`
                     """
     )
     @GetMapping
     public ResponseEntity<ApiResponse<AreaPageResponse>> getAreas(
             @Parameter(description = "페이지 번호", example = "0")
             @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "페이지 크기", example = "10")
+            @Parameter(description = "페이지 크기 (허용값: 10, 30, 50)", example = "10")
             @RequestParam(defaultValue = "10") int size,
             @Parameter(description = "활성 여부 필터", example = "true")
             @RequestParam(required = false) Boolean active,
-            @Parameter(description = "정렬 조건", example = "createdAt,DESC")
+            @Parameter(
+                    description = "정렬 조건 (`{필드명},{정렬방향}` 형식, 허용 필드: name, city, district, createdAt, updatedAt / 방향: ASC, DESC)",
+                    example = "createdAt,DESC"
+            )
             @RequestParam(required = false) String sort
     ) {
         AreaPageResponse response = areaService.getAreas(page, size, sort, active);
