@@ -18,7 +18,10 @@ public enum StoreCategoryErrorCode implements BaseErrorCode {
     STORE_CATEGORY_LIST_UNSUPPORTED_SORT_DIRECTION(HttpStatus.BAD_REQUEST, "정렬 방향은 ASC 또는 DESC만 사용할 수 있습니다."),
 
     // 가게 카테고리 상세 조회 API 관련 에러 코드
-    STORE_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "가게 카테고리를 찾을 수 없습니다.");
+    STORE_CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "가게 카테고리를 찾을 수 없습니다."),
+
+    // 가게 카테고리 수정 API 관련 에러 코드
+    STORE_CATEGORY_UPDATE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "가게 카테고리를 수정할 권한이 없습니다.");
 
     private final HttpStatus status;
     private final String message;

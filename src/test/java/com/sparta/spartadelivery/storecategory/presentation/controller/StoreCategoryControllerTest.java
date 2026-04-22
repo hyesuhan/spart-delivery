@@ -6,6 +6,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -17,6 +18,7 @@ import com.sparta.spartadelivery.global.infrastructure.config.security.UserPrinc
 import com.sparta.spartadelivery.storecategory.application.service.StoreCategoryService;
 import com.sparta.spartadelivery.storecategory.exception.StoreCategoryErrorCode;
 import com.sparta.spartadelivery.storecategory.presentation.dto.request.StoreCategoryCreateRequest;
+import com.sparta.spartadelivery.storecategory.presentation.dto.request.StoreCategoryUpdateRequest;
 import com.sparta.spartadelivery.storecategory.presentation.dto.response.StoreCategoryDetailResponse;
 import com.sparta.spartadelivery.storecategory.presentation.dto.response.StoreCategoryListResponse;
 import com.sparta.spartadelivery.storecategory.presentation.dto.response.StoreCategoryPageResponse;
@@ -201,6 +203,71 @@ class StoreCategoryControllerTest {
 
         mockMvc.perform(get("/api/v1/store-categories/{storeCategoryId}", storeCategoryId)
                         .with(authentication(managerToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("가게 카테고리를 찾을 수 없습니다."));
+    }
+
+    @Test
+    @DisplayName("가게 카테고리 수정 성공 시 200 OK를 반환한다")
+    void updateStoreCategory() throws Exception {
+        UUID storeCategoryId = UUID.randomUUID();
+        StoreCategoryUpdateRequest request = new StoreCategoryUpdateRequest("중식");
+        StoreCategoryDetailResponse response = storeCategoryResponse("중식");
+        given(storeCategoryService.updateStoreCategory(any(UUID.class), any(StoreCategoryUpdateRequest.class), any(UserPrincipal.class)))
+                .willReturn(response);
+
+        mockMvc.perform(put("/api/v1/store-categories/{storeCategoryId}", storeCategoryId)
+                        .with(authentication(managerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.name").value("중식"));
+    }
+
+    @Test
+    @DisplayName("가게 카테고리 수정 요청값이 유효하지 않으면 400을 반환한다")
+    void updateStoreCategoryWithInvalidRequest() throws Exception {
+        UUID storeCategoryId = UUID.randomUUID();
+        StoreCategoryUpdateRequest request = new StoreCategoryUpdateRequest("");
+
+        mockMvc.perform(put("/api/v1/store-categories/{storeCategoryId}", storeCategoryId)
+                        .with(authentication(managerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    @DisplayName("가게 카테고리 수정 권한이 없으면 403을 반환한다")
+    void updateStoreCategoryAccessDenied() throws Exception {
+        UUID storeCategoryId = UUID.randomUUID();
+        StoreCategoryUpdateRequest request = new StoreCategoryUpdateRequest("중식");
+        given(storeCategoryService.updateStoreCategory(any(UUID.class), any(StoreCategoryUpdateRequest.class), any(UserPrincipal.class)))
+                .willThrow(new AppException(StoreCategoryErrorCode.STORE_CATEGORY_UPDATE_ACCESS_DENIED));
+
+        mockMvc.perform(put("/api/v1/store-categories/{storeCategoryId}", storeCategoryId)
+                        .with(authentication(managerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("가게 카테고리를 수정할 권한이 없습니다."));
+    }
+
+    @Test
+    @DisplayName("수정할 가게 카테고리가 없으면 404를 반환한다")
+    void updateStoreCategoryNotFound() throws Exception {
+        UUID storeCategoryId = UUID.randomUUID();
+        StoreCategoryUpdateRequest request = new StoreCategoryUpdateRequest("중식");
+        given(storeCategoryService.updateStoreCategory(any(UUID.class), any(StoreCategoryUpdateRequest.class), any(UserPrincipal.class)))
+                .willThrow(new AppException(StoreCategoryErrorCode.STORE_CATEGORY_NOT_FOUND));
+
+        mockMvc.perform(put("/api/v1/store-categories/{storeCategoryId}", storeCategoryId)
+                        .with(authentication(managerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("가게 카테고리를 찾을 수 없습니다."));
     }
