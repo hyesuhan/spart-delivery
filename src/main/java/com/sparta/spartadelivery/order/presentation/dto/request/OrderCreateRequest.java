@@ -4,6 +4,7 @@ import com.sparta.spartadelivery.address.domain.entity.Address;
 import com.sparta.spartadelivery.order.domain.entity.Order;
 import com.sparta.spartadelivery.order.domain.entity.OrderType;
 import com.sparta.spartadelivery.user.domain.entity.UserEntity;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
@@ -21,11 +22,9 @@ public record OrderCreateRequest(
 
         String request,
 
-        @NotNull
+        @NotNull @Valid
         List<OrderItemRequest> orderItems
 ) {
-
-//public static Order toEntity(OrderCreateRequest request, )
 
 
 }
