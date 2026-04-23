@@ -6,7 +6,6 @@ import com.sparta.spartadelivery.global.infrastructure.config.security.JwtAuthen
 import com.sparta.spartadelivery.global.infrastructure.config.security.JwtTokenProvider;
 import com.sparta.spartadelivery.global.infrastructure.config.security.UserPrincipal;
 import com.sparta.spartadelivery.order.application.OrderService;
-import com.sparta.spartadelivery.order.domain.entity.OrderStatus;
 import com.sparta.spartadelivery.order.domain.entity.OrderType;
 import com.sparta.spartadelivery.order.exception.OrderErrorCode;
 import com.sparta.spartadelivery.order.presentation.controller.OrderController;
@@ -23,7 +22,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;

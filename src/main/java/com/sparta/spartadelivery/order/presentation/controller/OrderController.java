@@ -6,6 +6,7 @@ import com.sparta.spartadelivery.order.application.OrderService;
 import com.sparta.spartadelivery.order.presentation.dto.request.OrderCreateRequest;
 import com.sparta.spartadelivery.order.presentation.dto.request.UpdateOrderRequest;
 import com.sparta.spartadelivery.order.presentation.dto.response.OrderResponse;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,13 @@ public class OrderController {
 
     private final OrderService orderService;
 
+    @Operation(
+            summary = "주문 생성 API",
+            description = """
+                    CUSTOMER 만 주문이 가능합니다.
+                    
+                    """
+    )
     @PostMapping
     public ResponseEntity<ApiResponse<OrderResponse>> createOrder(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
@@ -33,8 +41,16 @@ public class OrderController {
 
     }
 
+    @Operation(
+            summary = "주문 요청 사항 수정 API",
+            description = """
+                    CUSTOMER 만 주문 요청 사항 수정이 가능합니다.
+                    
+                    - 단, PENDING 상태일 때만 수정이 가능합니다.
+                    """
+    )
     @PutMapping("/{orderId}")
-    public ResponseEntity<ApiResponse<?>> updateOrderReqeust(
+    public ResponseEntity<ApiResponse<?>> updateOrderRequest(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @PathVariable UUID orderId,
             @RequestBody UpdateOrderRequest request
@@ -47,6 +63,14 @@ public class OrderController {
 
     }
 
+    @Operation(
+            summary = "주문 취소 API",
+            description = """
+                    CUSTOMER: 5분 이내에만 주문 취소가 가능합니다. (서버 시간 기준)
+                    
+                    MASTER: 5분 이내에만 주문 취소가 가능합니다.  (서버 시간 기준)                  
+                    """
+    )
     @PatchMapping("/{orderId}/cancel")
     public ResponseEntity<ApiResponse<?>> cancelOrder(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
@@ -60,6 +84,12 @@ public class OrderController {
                 .body(ApiResponse.success(HttpStatus.OK.value(), "SUCCESS", null));
     }
 
+    @Operation(
+            summary = "주문 삭제 API",
+            description = """
+                    MASTER: 특정 주문을 삭제할 수 있습니다. (softdelete)
+                    """
+    )
     @DeleteMapping("/{orderId}")
     public ResponseEntity<ApiResponse<?>> deleteOrder (
             @AuthenticationPrincipal UserPrincipal userPrincipal,
