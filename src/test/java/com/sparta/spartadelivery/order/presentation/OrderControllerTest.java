@@ -5,6 +5,7 @@ import com.sparta.spartadelivery.global.exception.AppException;
 import com.sparta.spartadelivery.global.infrastructure.config.security.JwtAuthenticationFilter;
 import com.sparta.spartadelivery.global.infrastructure.config.security.JwtTokenProvider;
 import com.sparta.spartadelivery.global.infrastructure.config.security.UserPrincipal;
+import com.sparta.spartadelivery.order.application.OrderOwnerService;
 import com.sparta.spartadelivery.order.application.OrderService;
 import com.sparta.spartadelivery.order.domain.entity.OrderType;
 import com.sparta.spartadelivery.order.exception.OrderErrorCode;
@@ -74,6 +75,9 @@ public class OrderControllerTest {
     private JwtTokenProvider jwtTokenProvider;
 
     @MockitoBean
+    private OrderOwnerService orderOwnerService;
+
+    @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Autowired
@@ -90,7 +94,9 @@ public class OrderControllerTest {
         customerPrincipal = UserPrincipal.builder()
                 .id(1L)
                 .accountName("customer1")
+                .email("test@sparta.com")
                 .nickname("고객")
+                .password("pa123")
                 .role(Role.CUSTOMER)
                 .build();
 
