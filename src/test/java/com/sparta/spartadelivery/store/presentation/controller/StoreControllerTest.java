@@ -1,8 +1,8 @@
 package com.sparta.spartadelivery.store.presentation.controller;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.any;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -82,7 +82,7 @@ class StoreControllerTest {
     }
 
     @Test
-    @DisplayName("가게 목록 조회 성공 시 200 OK를 반환한다")
+    @DisplayName("일반 가게 목록 조회 성공 시 200 OK를 반환한다")
     void getStores() throws Exception {
         StorePageResponse response = new StorePageResponse(
                 List.of(
@@ -113,7 +113,7 @@ class StoreControllerTest {
     }
 
     @Test
-    @DisplayName("가게 목록 조회 시 잘못된 페이지 번호면 400을 반환한다")
+    @DisplayName("일반 가게 목록 조회 시 잘못된 페이지 번호면 400을 반환한다")
     void getStoresWithInvalidPageNumber() throws Exception {
         given(storeService.getStores(-1, 10, null))
                 .willThrow(new AppException(StoreErrorCode.STORE_LIST_INVALID_PAGE_NUMBER));
@@ -126,7 +126,7 @@ class StoreControllerTest {
     }
 
     @Test
-    @DisplayName("가게 목록 조회 시 잘못된 정렬 조건이면 400을 반환한다")
+    @DisplayName("일반 가게 목록 조회 시 잘못된 정렬 조건이면 400을 반환한다")
     void getStoresWithInvalidSortFormat() throws Exception {
         given(storeService.getStores(0, 10, "createdAt"))
                 .willThrow(new AppException(StoreErrorCode.STORE_LIST_INVALID_SORT_FORMAT));
@@ -138,6 +138,44 @@ class StoreControllerTest {
                 .andExpect(jsonPath("$.message").value("정렬 조건은 {property},{direction} 형식이어야 합니다."));
     }
 
+    @Test
+    @DisplayName("관리자용 가게 목록 조회 성공 시 200 OK를 반환한다")
+    void getAdminStores() throws Exception {
+        StorePageResponse response = new StorePageResponse(
+                List.of(
+                        storeListResponse("스파르타 분식", "분식", "강남"),
+                        hiddenStoreListResponse("스파르타 치킨", "치킨", "서초")
+                ),
+                0,
+                10,
+                2,
+                1,
+                "createdAt,DESC"
+        );
+        UsernamePasswordAuthenticationToken managerToken = authenticationToken(Role.MANAGER);
+        given(storeService.getAdminStores(any(UserPrincipal.class), any(Integer.class), any(Integer.class), any()))
+                .willReturn(response);
+
+        mockMvc.perform(get("/api/v1/stores/admin")
+                        .with(authentication(managerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.content.length()").value(2))
+                .andExpect(jsonPath("$.data.content[1].hidden").value(true));
+    }
+
+    @Test
+    @DisplayName("관리자 권한이 없으면 관리자용 가게 목록 조회 시 403을 반환한다")
+    void getAdminStoresByCustomerDenied() throws Exception {
+        given(storeService.getAdminStores(any(UserPrincipal.class), any(Integer.class), any(Integer.class), any()))
+                .willThrow(new AppException(StoreErrorCode.STORE_ADMIN_LIST_ACCESS_DENIED));
+
+        mockMvc.perform(get("/api/v1/stores/admin")
+                        .with(authentication(customerToken)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("관리자용 가게 목록을 조회할 권한이 없습니다."));
+    }
+
     private StoreListResponse storeListResponse(String name, String storeCategoryName, String areaName) {
         return new StoreListResponse(
                 UUID.randomUUID(),
@@ -146,6 +184,18 @@ class StoreControllerTest {
                 name,
                 BigDecimal.ZERO,
                 false,
+                LocalDateTime.now()
+        );
+    }
+
+    private StoreListResponse hiddenStoreListResponse(String name, String storeCategoryName, String areaName) {
+        return new StoreListResponse(
+                UUID.randomUUID(),
+                storeCategoryName,
+                areaName,
+                name,
+                BigDecimal.ZERO,
+                true,
                 LocalDateTime.now()
         );
     }

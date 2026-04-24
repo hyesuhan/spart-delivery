@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import com.sparta.spartadelivery.area.domain.entity.Area;
 import com.sparta.spartadelivery.global.exception.AppException;
+import com.sparta.spartadelivery.global.infrastructure.config.security.UserPrincipal;
 import com.sparta.spartadelivery.store.application.service.StoreService;
 import com.sparta.spartadelivery.store.domain.entity.Store;
 import com.sparta.spartadelivery.store.domain.repository.StoreRepository;
@@ -36,12 +37,12 @@ class StoreServiceTest {
     private StoreService storeService;
 
     @Test
-    @DisplayName("가게 목록을 페이지네이션 형태로 조회한다")
+    @DisplayName("일반 가게 목록은 숨김 가게를 제외하고 조회한다")
     void getStores() {
         Store first = store("스파르타 분식", "분식", "강남");
         Store second = store("스파르타 치킨", "치킨", "서초");
         PageRequest pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
-        when(storeRepository.findAllByDeletedAtIsNull(pageable))
+        when(storeRepository.findAllPublicStores(pageable))
                 .thenReturn(new PageImpl<>(List.of(first, second), pageable, 2));
 
         var response = storeService.getStores(0, 10, null);
@@ -58,10 +59,10 @@ class StoreServiceTest {
     }
 
     @Test
-    @DisplayName("조회 결과가 없으면 빈 목록을 반환한다")
+    @DisplayName("일반 가게 목록 조회 결과가 없으면 빈 목록을 반환한다")
     void getStoresWithEmptyContent() {
         PageRequest pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
-        when(storeRepository.findAllByDeletedAtIsNull(pageable))
+        when(storeRepository.findAllPublicStores(pageable))
                 .thenReturn(new PageImpl<>(List.of(), pageable, 0));
 
         var response = storeService.getStores(0, 10, null);
@@ -69,6 +70,34 @@ class StoreServiceTest {
         assertThat(response.content()).isEmpty();
         assertThat(response.totalElements()).isZero();
         assertThat(response.totalPages()).isZero();
+    }
+
+    @Test
+    @DisplayName("관리자용 가게 목록은 숨김 가게를 포함해 조회한다")
+    void getAdminStores() {
+        Store visibleStore = store("스파르타 분식", "분식", "강남");
+        Store hiddenStore = hiddenStore("스파르타 치킨", "치킨", "서초");
+        UserPrincipal requester = principal(Role.MANAGER);
+        PageRequest pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        when(storeRepository.findAllByDeletedAtIsNull(pageable))
+                .thenReturn(new PageImpl<>(List.of(visibleStore, hiddenStore), pageable, 2));
+
+        var response = storeService.getAdminStores(requester, 0, 10, null);
+
+        assertThat(response.content()).hasSize(2);
+        assertThat(response.content().get(0).hidden()).isFalse();
+        assertThat(response.content().get(1).hidden()).isTrue();
+    }
+
+    @Test
+    @DisplayName("관리자 권한이 없으면 관리자용 가게 목록을 조회할 수 없다")
+    void getAdminStoresByCustomerDenied() {
+        UserPrincipal requester = principal(Role.CUSTOMER);
+
+        assertThatThrownBy(() -> storeService.getAdminStores(requester, 0, 10, null))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(StoreErrorCode.STORE_ADMIN_LIST_ACCESS_DENIED);
     }
 
     @Test
@@ -150,5 +179,22 @@ class StoreServiceTest {
                 .build();
         ReflectionTestUtils.setField(store, "id", UUID.randomUUID());
         return store;
+    }
+
+    private Store hiddenStore(String name, String categoryName, String areaName) {
+        Store store = store(name, categoryName, areaName);
+        store.hide();
+        return store;
+    }
+
+    private UserPrincipal principal(Role role) {
+        return UserPrincipal.builder()
+                .id(1L)
+                .accountName("user01")
+                .email("user01@example.com")
+                .password("password")
+                .nickname("user")
+                .role(role)
+                .build();
     }
 }
