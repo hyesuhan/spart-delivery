@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -138,7 +139,32 @@ public class StoreCategoryController {
             @PathVariable UUID storeCategoryId,
             @Valid @RequestBody StoreCategoryUpdateRequest request
     ) {
-        StoreCategoryDetailResponse response = storeCategoryService.updateStoreCategory(storeCategoryId, request, userPrincipal);
+        StoreCategoryDetailResponse response =
+                storeCategoryService.updateStoreCategory(storeCategoryId, request, userPrincipal);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
+    }
+
+    @Operation(
+            summary = "가게 카테고리 삭제 API",
+            description = """
+                    가게 카테고리를 soft delete 방식으로 삭제 처리합니다.
+
+                    **요청 가능 권한**
+
+                    - MASTER
+
+                    **처리 정책**
+
+                    - 실제 데이터를 제거하지 않고 deletedAt, deletedBy를 기록합니다.
+                    - 이미 삭제된 가게 카테고리는 삭제 대상으로 조회되지 않습니다.
+                    """
+    )
+    @DeleteMapping("/{storeCategoryId}")
+    public ResponseEntity<ApiResponse<Void>> deleteStoreCategory(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @PathVariable UUID storeCategoryId
+    ) {
+        storeCategoryService.deleteStoreCategory(storeCategoryId, userPrincipal);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), null));
     }
 }

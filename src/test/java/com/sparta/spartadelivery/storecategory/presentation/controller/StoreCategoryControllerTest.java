@@ -3,7 +3,9 @@ package com.sparta.spartadelivery.storecategory.presentation.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -78,10 +80,12 @@ class StoreCategoryControllerTest {
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     private UsernamePasswordAuthenticationToken managerToken;
+    private UsernamePasswordAuthenticationToken masterToken;
 
     @BeforeEach
     void setUp() throws Exception {
         managerToken = authenticationToken(Role.MANAGER);
+        masterToken = authenticationToken(Role.MASTER);
 
         doAnswer(invocation -> {
             jakarta.servlet.FilterChain chain = invocation.getArgument(2);
@@ -268,6 +272,44 @@ class StoreCategoryControllerTest {
                         .with(authentication(managerToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("가게 카테고리를 찾을 수 없습니다."));
+    }
+
+    @Test
+    @DisplayName("가게 카테고리 삭제 성공 시 200 OK를 반환한다")
+    void deleteStoreCategory() throws Exception {
+        UUID storeCategoryId = UUID.randomUUID();
+
+        mockMvc.perform(delete("/api/v1/store-categories/{storeCategoryId}", storeCategoryId)
+                        .with(authentication(masterToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"));
+    }
+
+    @Test
+    @DisplayName("가게 카테고리 삭제 권한이 없으면 403을 반환한다")
+    void deleteStoreCategoryAccessDenied() throws Exception {
+        UUID storeCategoryId = UUID.randomUUID();
+        doThrow(new AppException(StoreCategoryErrorCode.STORE_CATEGORY_DELETE_ACCESS_DENIED))
+                .when(storeCategoryService).deleteStoreCategory(any(UUID.class), any(UserPrincipal.class));
+
+        mockMvc.perform(delete("/api/v1/store-categories/{storeCategoryId}", storeCategoryId)
+                        .with(authentication(managerToken)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("가게 카테고리를 삭제할 권한이 없습니다."));
+    }
+
+    @Test
+    @DisplayName("삭제할 가게 카테고리가 없으면 404를 반환한다")
+    void deleteStoreCategoryNotFound() throws Exception {
+        UUID storeCategoryId = UUID.randomUUID();
+        doThrow(new AppException(StoreCategoryErrorCode.STORE_CATEGORY_NOT_FOUND))
+                .when(storeCategoryService).deleteStoreCategory(any(UUID.class), any(UserPrincipal.class));
+
+        mockMvc.perform(delete("/api/v1/store-categories/{storeCategoryId}", storeCategoryId)
+                        .with(authentication(masterToken)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("가게 카테고리를 찾을 수 없습니다."));
     }
