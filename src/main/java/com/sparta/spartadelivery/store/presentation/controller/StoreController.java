@@ -71,8 +71,9 @@ public class StoreController {
 
                     **처리 정책**
 
-                    - 삭제되지 않은 가게를 모두 조회합니다.
-                    - 숨김 가게도 조회 결과에 포함됩니다.
+                    - 삭제되지 않은 가게를 조회합니다.
+                    - `hidden=true`이면 숨김 가게를 포함해 조회합니다.
+                    - `hidden=false`이면 숨김 처리되지 않은 가게만 조회합니다.
                     - 기본 정렬은 createdAt,DESC 입니다.
                     - size는 10, 30, 50 중 하나만 사용할 수 있습니다.
                     - sort는 `{필드명},{정렬방향}` 형식으로 전달합니다.
@@ -87,13 +88,15 @@ public class StoreController {
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "페이지 크기 (허용값: 10, 30, 50)", example = "10")
             @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "숨김 가게 포함 여부", example = "false")
+            @RequestParam(defaultValue = "false") boolean hidden,
             @Parameter(
                     description = "정렬 조건 (`{필드명},{정렬방향}` 형식, 허용 필드: name, averageRating, createdAt, updatedAt / 방향: ASC, DESC)",
                     example = "createdAt,DESC"
             )
             @RequestParam(required = false) String sort
     ) {
-        StorePageResponse response = storeService.getAdminStores(userPrincipal, page, size, sort);
+        StorePageResponse response = storeService.getAdminStores(userPrincipal, page, size, sort, hidden);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 }

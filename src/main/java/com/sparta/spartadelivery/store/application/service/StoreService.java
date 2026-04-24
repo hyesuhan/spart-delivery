@@ -40,14 +40,22 @@ public class StoreService {
         );
     }
 
-    public StorePageResponse getAdminStores(UserPrincipal requester, int page, int size, String sort) {
+    public StorePageResponse getAdminStores(
+            UserPrincipal requester,
+            int page,
+            int size,
+            String sort,
+            boolean hidden
+    ) {
         validateAdminListPermission(requester);
 
         String normalizedSort = normalizeSort(sort);
         Pageable pageable = createPageable(page, size, normalizedSort);
 
         return StorePageResponse.from(
-                storeRepository.findAllByDeletedAtIsNull(pageable),
+                hidden
+                        ? storeRepository.findAllByDeletedAtIsNull(pageable)
+                        : storeRepository.findAllPublicStores(pageable),
                 normalizedSort
         );
     }
