@@ -8,6 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -242,6 +243,76 @@ public class OrderTest {
         var field = order.getClass().getSuperclass().getDeclaredField("createdAt");
         field.setAccessible(true);
         field.set(order, value);
+    }
+
+    @Test
+    @DisplayName("성공: 주문 요청사항을 수정할 수 있다")
+    void updateRequest_Success() {
+        // given
+        Order order = Order.builder()
+                .request("기존 요청: 벨 누르지 마세요")
+                .build();
+        String newRequest = "새로운 요청: 문 앞에 놓아주세요";
+
+        // when
+        order.updateRequest(newRequest);
+
+        // then
+        assertThat(order.getRequest()).isEqualTo(newRequest);
+    }
+
+    private void setStatus(Order order, OrderStatus status) throws Exception {
+        Field field = Order.class.getDeclaredField("status");
+        field.setAccessible(true);
+        field.set(order, status);
+    }
+
+    @Test
+    @DisplayName("성공: 주문 상태를 다음 단계로 변경한다 (PENDING -> ACCEPTED)")
+    void updateOrderStatus_Success() throws Exception {
+        // given
+        Order order = Order.builder()
+                .build();
+
+        setStatus(order, OrderStatus.PENDING);
+
+        // when
+        order.updateOrderStatus();
+
+        // then
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.ACCEPTED);
+    }
+
+    @Test
+    @DisplayName("성공: 여러 번 호출 시 상태가 순차적으로 변경된다")
+    void updateOrderStatus_Sequential() throws Exception {
+        // given
+        Order order = Order.builder()
+                .build();
+
+        setStatus(order, OrderStatus.PENDING);
+
+        // when & then
+        order.updateOrderStatus(); // ACCEPTED
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.ACCEPTED);
+
+        order.updateOrderStatus(); // PREPARING
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PREPARING);
+    }
+
+    @Test
+    @DisplayName("실패: 배달 완료(DELIVERED) 상태에서 상태 변경 시 예외가 발생한다")
+    void updateOrderStatus_Fail_AlreadyDelivered() throws Exception {
+        // given
+        Order order = Order.builder()
+                .build();
+
+        setStatus(order, OrderStatus.DELIVERED);
+
+        // when & then
+        assertThatThrownBy(order::updateOrderStatus)
+                .isInstanceOf(AppException.class)
+                .hasFieldOrPropertyWithValue("errorCode", OrderErrorCode.ALREADY_DELIVERED);
     }
 
 
