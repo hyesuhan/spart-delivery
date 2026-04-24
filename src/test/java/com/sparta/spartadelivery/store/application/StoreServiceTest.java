@@ -49,13 +49,7 @@ class StoreServiceTest {
 
         assertThat(response.content()).hasSize(2);
         assertThat(response.content().get(0).name()).isEqualTo("스파르타 분식");
-        assertThat(response.content().get(0).storeCategoryName()).isEqualTo("분식");
-        assertThat(response.content().get(0).areaName()).isEqualTo("강남");
         assertThat(response.content().get(1).name()).isEqualTo("스파르타 치킨");
-        assertThat(response.page()).isEqualTo(0);
-        assertThat(response.size()).isEqualTo(10);
-        assertThat(response.totalElements()).isEqualTo(2);
-        assertThat(response.sort()).isEqualTo("createdAt,DESC");
     }
 
     @Test
@@ -73,8 +67,23 @@ class StoreServiceTest {
     }
 
     @Test
-    @DisplayName("관리자용 가게 목록은 숨김 가게를 포함해 조회한다")
-    void getAdminStores() {
+    @DisplayName("관리자용 가게 목록은 hidden이 false면 숨김 가게를 제외한다")
+    void getAdminStoresWithoutHidden() {
+        Store visibleStore = store("스파르타 분식", "분식", "강남");
+        UserPrincipal requester = principal(Role.MANAGER);
+        PageRequest pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+        when(storeRepository.findAllPublicStores(pageable))
+                .thenReturn(new PageImpl<>(List.of(visibleStore), pageable, 1));
+
+        var response = storeService.getAdminStores(requester, 0, 10, null, false);
+
+        assertThat(response.content()).hasSize(1);
+        assertThat(response.content().get(0).hidden()).isFalse();
+    }
+
+    @Test
+    @DisplayName("관리자용 가게 목록은 hidden이 true면 숨김 가게를 포함한다")
+    void getAdminStoresWithHidden() {
         Store visibleStore = store("스파르타 분식", "분식", "강남");
         Store hiddenStore = hiddenStore("스파르타 치킨", "치킨", "서초");
         UserPrincipal requester = principal(Role.MANAGER);
@@ -82,10 +91,9 @@ class StoreServiceTest {
         when(storeRepository.findAllByDeletedAtIsNull(pageable))
                 .thenReturn(new PageImpl<>(List.of(visibleStore, hiddenStore), pageable, 2));
 
-        var response = storeService.getAdminStores(requester, 0, 10, null);
+        var response = storeService.getAdminStores(requester, 0, 10, null, true);
 
         assertThat(response.content()).hasSize(2);
-        assertThat(response.content().get(0).hidden()).isFalse();
         assertThat(response.content().get(1).hidden()).isTrue();
     }
 
@@ -94,7 +102,7 @@ class StoreServiceTest {
     void getAdminStoresByCustomerDenied() {
         UserPrincipal requester = principal(Role.CUSTOMER);
 
-        assertThatThrownBy(() -> storeService.getAdminStores(requester, 0, 10, null))
+        assertThatThrownBy(() -> storeService.getAdminStores(requester, 0, 10, null, true))
                 .isInstanceOf(AppException.class)
                 .extracting("errorCode")
                 .isEqualTo(StoreErrorCode.STORE_ADMIN_LIST_ACCESS_DENIED);

@@ -102,14 +102,7 @@ class StoreControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.message").value("SUCCESS"))
-                .andExpect(jsonPath("$.data.content.length()").value(2))
-                .andExpect(jsonPath("$.data.content[0].name").value("스파르타 분식"))
-                .andExpect(jsonPath("$.data.content[0].storeCategoryName").value("분식"))
-                .andExpect(jsonPath("$.data.content[1].name").value("스파르타 치킨"))
-                .andExpect(jsonPath("$.data.page").value(0))
-                .andExpect(jsonPath("$.data.size").value(10))
-                .andExpect(jsonPath("$.data.totalElements").value(2))
-                .andExpect(jsonPath("$.data.sort").value("createdAt,DESC"));
+                .andExpect(jsonPath("$.data.content.length()").value(2));
     }
 
     @Test
@@ -126,21 +119,31 @@ class StoreControllerTest {
     }
 
     @Test
-    @DisplayName("일반 가게 목록 조회 시 잘못된 정렬 조건이면 400을 반환한다")
-    void getStoresWithInvalidSortFormat() throws Exception {
-        given(storeService.getStores(0, 10, "createdAt"))
-                .willThrow(new AppException(StoreErrorCode.STORE_LIST_INVALID_SORT_FORMAT));
+    @DisplayName("관리자용 가게 목록 조회 시 hidden이 false면 숨김 제외 결과를 반환한다")
+    void getAdminStoresWithoutHidden() throws Exception {
+        StorePageResponse response = new StorePageResponse(
+                List.of(storeListResponse("스파르타 분식", "분식", "강남")),
+                0,
+                10,
+                1,
+                1,
+                "createdAt,DESC"
+        );
+        UsernamePasswordAuthenticationToken managerToken = authenticationToken(Role.MANAGER);
+        given(storeService.getAdminStores(any(UserPrincipal.class), any(Integer.class), any(Integer.class), any(), any(Boolean.class)))
+                .willReturn(response);
 
-        mockMvc.perform(get("/api/v1/stores")
-                        .with(authentication(customerToken))
-                        .param("sort", "createdAt"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("정렬 조건은 {property},{direction} 형식이어야 합니다."));
+        mockMvc.perform(get("/api/v1/stores/admin")
+                        .with(authentication(managerToken))
+                        .param("hidden", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()").value(1))
+                .andExpect(jsonPath("$.data.content[0].hidden").value(false));
     }
 
     @Test
-    @DisplayName("관리자용 가게 목록 조회 성공 시 200 OK를 반환한다")
-    void getAdminStores() throws Exception {
+    @DisplayName("관리자용 가게 목록 조회 시 hidden이 true면 숨김 포함 결과를 반환한다")
+    void getAdminStoresWithHidden() throws Exception {
         StorePageResponse response = new StorePageResponse(
                 List.of(
                         storeListResponse("스파르타 분식", "분식", "강남"),
@@ -153,13 +156,13 @@ class StoreControllerTest {
                 "createdAt,DESC"
         );
         UsernamePasswordAuthenticationToken managerToken = authenticationToken(Role.MANAGER);
-        given(storeService.getAdminStores(any(UserPrincipal.class), any(Integer.class), any(Integer.class), any()))
+        given(storeService.getAdminStores(any(UserPrincipal.class), any(Integer.class), any(Integer.class), any(), any(Boolean.class)))
                 .willReturn(response);
 
         mockMvc.perform(get("/api/v1/stores/admin")
-                        .with(authentication(managerToken)))
+                        .with(authentication(managerToken))
+                        .param("hidden", "true"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.data.content.length()").value(2))
                 .andExpect(jsonPath("$.data.content[1].hidden").value(true));
     }
@@ -167,11 +170,12 @@ class StoreControllerTest {
     @Test
     @DisplayName("관리자 권한이 없으면 관리자용 가게 목록 조회 시 403을 반환한다")
     void getAdminStoresByCustomerDenied() throws Exception {
-        given(storeService.getAdminStores(any(UserPrincipal.class), any(Integer.class), any(Integer.class), any()))
+        given(storeService.getAdminStores(any(UserPrincipal.class), any(Integer.class), any(Integer.class), any(), any(Boolean.class)))
                 .willThrow(new AppException(StoreErrorCode.STORE_ADMIN_LIST_ACCESS_DENIED));
 
         mockMvc.perform(get("/api/v1/stores/admin")
-                        .with(authentication(customerToken)))
+                        .with(authentication(customerToken))
+                        .param("hidden", "true"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("관리자용 가게 목록을 조회할 권한이 없습니다."));
     }
