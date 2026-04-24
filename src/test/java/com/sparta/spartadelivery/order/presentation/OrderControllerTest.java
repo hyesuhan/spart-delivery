@@ -38,9 +38,9 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -224,4 +224,51 @@ public class OrderControllerTest {
                 .andDo(print())
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    @DisplayName("주문 상태 변경 성공 - 200 OK")
+    void updateOrderStatus_Success() throws Exception {
+        // given
+        // 서비스 메서드가 void이므로 doNothing() 사용
+        doNothing().when(orderOwnerService).updateOrderStatus(anyLong(), any(UUID.class));
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/orders/{orderId}/status", orderId)
+                        .with(authentication(customerAuthToken))) // @AuthenticationPrincipal 주입
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"));
+
+        // 서비스가 정확한 파라미터로 호출되었는지 확인 (Independent & Self-Validating)
+        verify(orderOwnerService).updateOrderStatus(eq(1L), eq(orderId));
+    }
+
+    @Test
+    @DisplayName("실패: 권한이 없는 사용자가 상태 변경 시 403 Forbidden을 반환한다")
+    void updateOrderStatus_Forbidden() throws Exception {
+        // given
+        doThrow(new AppException(OrderErrorCode.UNAUTHORIZED_ORDER_ACCESS))
+                .when(orderOwnerService).updateOrderStatus(anyLong(), any(UUID.class));
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/orders/{orderId}/status", orderId)
+                        .with(authentication(customerAuthToken)))
+                .andExpect(status().isForbidden()) // GlobalExceptionHandler에서 처리한다고 가정
+                .andExpect(jsonPath("$.message").value(OrderErrorCode.UNAUTHORIZED_ORDER_ACCESS.getMessage()));
+    }
+
+    @Test
+    @DisplayName("실패: 존재하지 않는 주문의 상태 변경 시 404 Not Found를 반환한다")
+    void updateOrderStatus_NotFound() throws Exception {
+        // given
+        doThrow(new AppException(OrderErrorCode.ORDER_NOT_FOUND))
+                .when(orderOwnerService).updateOrderStatus(anyLong(), any(UUID.class));
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/orders/{orderId}/status", orderId)
+                        .with(authentication(customerAuthToken)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value(OrderErrorCode.ORDER_NOT_FOUND.getMessage()));
+    }
+
 }

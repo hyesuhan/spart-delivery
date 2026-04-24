@@ -55,10 +55,6 @@ public class OrderService {
         return OrderResponse.from(order);
     }
 
-    public OrderResponse getOrderById(Long requestUserId, UUID orderId) {
-        return null;
-    }
-
 
     /** ONLY CUSTOMER **/
     @Transactional
