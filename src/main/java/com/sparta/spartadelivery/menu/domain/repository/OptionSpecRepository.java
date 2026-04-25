@@ -1,9 +1,9 @@
 package com.sparta.spartadelivery.menu.domain.repository;
 
-import com.sparta.spartadelivery.menu.domain.entity.Menu;
+import com.sparta.spartadelivery.menu.domain.entity.OptionSpec;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.UUID;
 
-public interface MenuRepository extends JpaRepository<Menu, UUID> {
+public interface OptionSpecRepository extends JpaRepository<OptionSpec, UUID> {
 }
