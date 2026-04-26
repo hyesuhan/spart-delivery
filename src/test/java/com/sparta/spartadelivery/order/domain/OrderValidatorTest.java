@@ -2,6 +2,7 @@ package com.sparta.spartadelivery.order.domain;
 
 import com.sparta.spartadelivery.address.domain.repository.AddressRepository;
 import com.sparta.spartadelivery.address.exception.AddressErrorCode;
+import com.sparta.spartadelivery.auth.exception.AuthErrorCode;
 import com.sparta.spartadelivery.global.exception.AppException;
 import com.sparta.spartadelivery.menu.domain.entity.Menu;
 import com.sparta.spartadelivery.menu.domain.repository.MenuRepository;
@@ -367,6 +368,91 @@ public class OrderValidatorTest {
         assertThatThrownBy(() -> orderValidator.validCreateOrder(userId, request))
                 .isInstanceOf(AppException.class)
                 .hasFieldOrPropertyWithValue("errorCode", AddressErrorCode.ADDRESS_NOT_FOUND);
+    }
+
+    @Nested
+    @DisplayName("커버리지 통과용 - 에지케이스 추가")
+    class EdgeCaseValidation {
+
+        @Test
+        @DisplayName("실패: 메뉴 가격은 일치하지만 이름이 변경된 경우 (MENU_NAME_CHANGED)")
+        void validateMenuPrice_NameMismatch() {
+            // given
+            OrderItemRequest itemRequest = new OrderItemRequest(menuId, "옛날치킨", 1, 20000); // 요청 이름: 옛날치킨
+
+            Menu menu = mock(Menu.class);
+            given(menu.getId()).willReturn(menuId);
+            given(menu.getPrice()).willReturn(20000); // 가격은 일치
+            given(menu.getName()).willReturn("황금올리브치킨"); // DB 이름: 황금올리브치킨
+
+            given(menuRepository.findAllById(any())).willReturn(List.of(menu));
+
+            // when & then
+            OrderCreateRequest request = new OrderCreateRequest(storeId, addressId, OrderType.ONLINE, null, List.of(itemRequest));
+            assertThatThrownBy(() -> orderValidator.validCreateOrder(userId, request))
+                    .isInstanceOf(AppException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", OrderErrorCode.MENU_NAME_CHANGED);
+        }
+
+        @Test
+        @DisplayName("실패: 주문 취소 시 유저 정보를 찾을 수 없음 (USER_NOT_FOUND)")
+        void validCancelOrder_UserNotFound() {
+            // given
+            given(userRepository.findById(userId)).willReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> orderValidator.validCancelOrder(userId, mock(Order.class)))
+                    .isInstanceOf(AppException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", AuthErrorCode.USER_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("실패: CUSTOMER나 MASTER가 아닌 권한(예: OWNER)이 주문 취소를 시도할 때")
+        void validCancelOrder_UnauthorizedRole() {
+            // given
+            UserEntity owner = mock(UserEntity.class);
+            given(owner.getRole()).willReturn(Role.OWNER); // 취소 권한이 없는 OWNER
+            given(userRepository.findById(userId)).willReturn(Optional.of(owner));
+
+            // when & then
+            assertThatThrownBy(() -> orderValidator.validCancelOrder(userId, mock(Order.class)))
+                    .isInstanceOf(AppException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", OrderErrorCode.UNAUTHORIZED_ORDER_ACCESS);
+        }
+
+        @Test
+        @DisplayName("실패: 주문 상태 변경 시 해당 가게가 존재하지 않는 경우")
+        void validUpdateOrderStatus_StoreNotFound() {
+            // given
+            UserEntity owner = mock(UserEntity.class);
+            given(owner.getRole()).willReturn(Role.OWNER);
+            given(userRepository.findById(userId)).willReturn(Optional.of(owner));
+
+            Order order = mock(Order.class);
+            given(order.getStoreId()).willReturn(storeId);
+
+            // 가게 정보를 찾을 수 없음
+            given(storeRepository.findById(storeId)).willReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> orderValidator.validUpdateOrderStatus(userId, order))
+                    .isInstanceOf(new AppException(OrderErrorCode.UNAUTHORIZED_ORDER_ACCESS).getClass());
+            // 코드상 가게가 없으면 UNAUTHORIZED_ORDER_ACCESS를 던짐
+        }
+
+        @Test
+        @DisplayName("실패: MASTER가 아닌 사용자가 관리자 전용 삭제 메서드 호출")
+        void validDeleteOrderByMaster_NotMaster() {
+            // given
+            UserEntity manager = mock(UserEntity.class);
+            given(manager.getRole()).willReturn(Role.MANAGER); // MANAGER는 MASTER가 아님
+            given(userRepository.findById(userId)).willReturn(Optional.of(manager));
+
+            // when & then
+            assertThatThrownBy(() -> orderValidator.validDeleteOrderByMaster(userId))
+                    .isInstanceOf(AppException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", OrderErrorCode.UNAUTHORIZED_ORDER_ACCESS);
+        }
     }
 
 

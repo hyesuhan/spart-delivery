@@ -1,8 +1,6 @@
-package com.sparta.spartadelivery.order.presentation.dto;
+package com.sparta.spartadelivery.order.presentation.dto.request;
 
 import com.sparta.spartadelivery.order.domain.entity.OrderType;
-import com.sparta.spartadelivery.order.presentation.dto.request.OrderCreateRequest;
-import com.sparta.spartadelivery.order.presentation.dto.request.OrderItemRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
