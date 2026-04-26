@@ -52,7 +52,6 @@ public class GetOrderService {
         };
 
         return orderQueryRepository.searchOrders(condition, pageable);
-
     }
 
 
