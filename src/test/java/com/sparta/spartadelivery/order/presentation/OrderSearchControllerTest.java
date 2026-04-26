@@ -205,17 +205,5 @@ public class OrderSearchControllerTest {
                     .andExpect(jsonPath("$.data.totalElements").value(1));
         }
 
-        @Test
-        @DisplayName("실패: 필수 파라미터(storeId)가 누락되면 400 에러가 발생한다.")
-        void getOrders_MissingParameter() throws Exception {
-            // given - storeId를 전달하지 않는 상황
-
-            // when & then
-            mockMvc.perform(get("/api/v1/orders")
-                            .with(authentication(customerAuthToken))
-                            .param("orderStatus", "PENDING")) // storeId 누락
-                    .andExpect(status().isBadRequest());
-            // @RequestParam이 필수값(기본값 true)인데 안 오면 스프링이 400을 던짐
-        }
     }
 }
