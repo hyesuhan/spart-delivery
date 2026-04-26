@@ -6,6 +6,7 @@ import com.sparta.spartadelivery.order.domain.OrderSearchValidator;
 import com.sparta.spartadelivery.order.domain.repository.OrderQueryRepository;
 import com.sparta.spartadelivery.order.presentation.dto.request.OrderSearchRequest;
 import com.sparta.spartadelivery.order.presentation.dto.response.OrderDetailInfo;
+import com.sparta.spartadelivery.order.presentation.dto.response.OrderSearch.OrderSearchResponse;
 import com.sparta.spartadelivery.order.presentation.dto.response.OrderSearch.OrderValidateResult;
 import com.sparta.spartadelivery.store.domain.entity.Store;
 import com.sparta.spartadelivery.store.domain.repository.StoreRepository;
@@ -36,7 +37,7 @@ public class GetOrderService {
         return OrderDetailInfo.from(result.order(), result.address().getAddress(), result.address().getDetail());
     }
 
-    public Page<?> search(Long userId, OrderSearchRequest check, Pageable pageable) {
+    public Page<OrderSearchResponse> search(Long userId, OrderSearchRequest check, Pageable pageable) {
         orderSearchValidator.validPageParameter(pageable);
 
         UserEntity user  = userRepository.findById(userId)
