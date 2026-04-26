@@ -174,45 +174,48 @@ public class OrderSearchControllerTest {
     class SearchOrders {
 
         @Test
-        @DisplayName("성공: 조건에 맞는 주문 목록을 페이징하여 반환한다.")
+        @DisplayName("성공: Query Parameter를 통해 조건에 맞는 주문 목록을 페이징하여 반환한다.")
         void getOrders_Success() throws Exception {
             // given
-            OrderSearchRequest.SearchCondition request = new OrderSearchRequest.SearchCondition(Role.CUSTOMER,  1L, null, null, null);
-            OrderSearchResponse item = new OrderSearchResponse(orderId, 1L, UUID.randomUUID(), "테스트상점", OrderStatus.PENDING, "치킨", "빨리요", LocalDateTime.now());
+            // 서비스 응답 데이터 준비
+            OrderSearchResponse item = new OrderSearchResponse(
+                    UUID.randomUUID(), 1L, UUID.randomUUID(), "테스트상점",
+                    OrderStatus.PENDING, "치킨", "빨리요", LocalDateTime.now()
+            );
             Page<OrderSearchResponse> pageResponse = new PageImpl<>(List.of(item), PageRequest.of(0, 10), 1);
 
+            // 서비스 메서드 모킹 (컨트롤러 내부에서 생성되는 객체이므로 any() 사용)
             given(getOrderService.search(anyLong(), any(OrderSearchRequest.class), any(Pageable.class)))
                     .willReturn(pageResponse);
 
             // when & then
             mockMvc.perform(get("/api/v1/orders")
-                            .with(authentication(customerAuthToken))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
+                            .with(authentication(customerAuthToken)) // 인증 설정
+                            // GET 요청이므로 .content()는 삭제하고 .param()으로 검색 조건 전달
+                            .param("storeId", UUID.randomUUID().toString())
+                            .param("orderStatus", "PENDING")
                             .param("page", "0")
-                            .param("size", "10"))
+                            .param("size", "10")
+                            .param("sort", "createdAt,desc")) // PageableDefault와 일치
                     .andDo(print())
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.status").value(200))
+                    .andExpect(jsonPath("$.status").value(200)) // ApiResponse 구조에 맞춤
+                    .andExpect(jsonPath("$.message").value("SUCCESS"))
                     .andExpect(jsonPath("$.data.content[0].storeName").value("테스트상점"))
                     .andExpect(jsonPath("$.data.totalElements").value(1));
         }
 
         @Test
-        @DisplayName("실패: 잘못된 페이지 사이즈 요청 시 400 Bad Request")
-        void getOrders_InvalidPageSize() throws Exception {
-            // given
-            given(getOrderService.search(anyLong(), any(OrderSearchRequest.class), any(Pageable.class)))
-                    .willThrow(new AppException(OrderErrorCode.INVALID_PAGE_SIZE));
+        @DisplayName("실패: 필수 파라미터(storeId)가 누락되면 400 에러가 발생한다.")
+        void getOrders_MissingParameter() throws Exception {
+            // given - storeId를 전달하지 않는 상황
 
             // when & then
             mockMvc.perform(get("/api/v1/orders")
                             .with(authentication(customerAuthToken))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(new OrderSearchRequest.SearchCondition(Role.CUSTOMER, 1L, null, null, null)))
-                            .param("size", "20")) // 비허용 사이즈
-                    .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.message").value(OrderErrorCode.INVALID_PAGE_SIZE.getMessage()));
+                            .param("orderStatus", "PENDING")) // storeId 누락
+                    .andExpect(status().isBadRequest());
+            // @RequestParam이 필수값(기본값 true)인데 안 오면 스프링이 400을 던짐
         }
     }
 }
