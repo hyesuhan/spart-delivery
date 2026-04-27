@@ -9,8 +9,6 @@ import com.sparta.spartadelivery.order.domain.repository.OrderRepository;
 import com.sparta.spartadelivery.order.exception.OrderErrorCode;
 import com.sparta.spartadelivery.order.presentation.dto.request.OrderCreateRequest;
 import com.sparta.spartadelivery.order.presentation.dto.response.OrderResponse;
-import com.sparta.spartadelivery.store.domain.repository.StoreRepository;
-import com.sparta.spartadelivery.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,8 +26,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderValidator orderValidator;
-    private final StoreRepository storeRepository;
-    private final UserRepository userRepository;
+
 
     /** ONLY CUSTOMER **/
     @Transactional
@@ -51,6 +48,7 @@ public class OrderService {
         );
 
         orderRepository.save(order);
+
 
         return OrderResponse.from(order);
     }

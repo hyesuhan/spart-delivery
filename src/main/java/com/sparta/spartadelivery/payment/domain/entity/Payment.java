@@ -19,9 +19,6 @@ public class Payment extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
-    private Long userId;
-
     // 이벤트 기반으로 처리 합니다.
     @Column(nullable = false)
     private UUID orderId;
@@ -37,9 +34,8 @@ public class Payment extends BaseEntity {
     @Column(nullable = false)
     private Integer amount;
 
-    public static Payment create(Long userId, UUID orderId, Integer amount) {
+    public static Payment create(UUID orderId, Integer amount) {
         Payment payment = new Payment();
-        payment.userId = userId;
         payment.orderId = orderId;
         payment.amount = amount;
         payment.status = PaymentStatus.PENDING;
