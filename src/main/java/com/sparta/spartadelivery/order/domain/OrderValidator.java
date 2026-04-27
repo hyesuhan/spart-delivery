@@ -143,7 +143,7 @@ public class OrderValidator {
             Menu menu = menuMap.get(item.menuId());
 
             // 1. 가격 확인
-            if (!Objects.equals(menu.getPrice(), item.unitPrice())) {
+            if (!Objects.equals(menu.getPrice().getPrice(), item.unitPrice())) {
                 throw new AppException(OrderErrorCode.MENU_PRICE_MISMATCH);
             }
 

@@ -187,7 +187,6 @@ public class OrderValidatorTest {
 
 
 
-        /*
         @Test
         @DisplayName("성공: DB의 메뉴 정보와 요청 정보가 일치한다")
         void validateMenuPrice_Success() {
@@ -206,7 +205,7 @@ public class OrderValidatorTest {
             assertDoesNotThrow(() -> orderValidator.validCreateOrder(userId, request));
         }
 
-         */
+
 
         @Test
         @DisplayName("실패: DB에 존재하지 않는 메뉴 ID가 포함됨 (MENU_NOT_FOUND)")

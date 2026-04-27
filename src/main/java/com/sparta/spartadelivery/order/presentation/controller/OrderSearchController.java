@@ -61,8 +61,8 @@ public class OrderSearchController {
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @RequestParam(required = false) UUID storeId,
             @RequestParam(required = false) OrderStatus orderStatus,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
-            Sort sort) {
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+            ) {
         Page<OrderSearchResponse> response = orderService.search(userPrincipal.getId(), new OrderSearchRequest(storeId, orderStatus), pageable);
 
         return ResponseEntity.status(HttpStatus.OK)
