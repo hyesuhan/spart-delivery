@@ -21,4 +21,8 @@ public interface AddressRepository extends JpaRepository<Address, UUID> {
     @Query("UPDATE Address a SET a.isDefault = false " +
             "WHERE a.user.username = :username AND a.isDefault = true")
     void updateAllDefaultToFalse(@Param("username") String username);
+
+
+    @Query("SELECT COUNT(a) > 0 FROM  Address a WHERE a.id = :id AND a.user.id = :userId")
+    boolean existsByIdAndCustomerId(UUID id, Long userId);
 }

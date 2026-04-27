@@ -1,8 +1,8 @@
 package com.sparta.spartadelivery.store.domain.entity;
 
 import com.sparta.spartadelivery.area.domain.entity.Area;
+import com.sparta.spartadelivery.category.domain.entity.Category;
 import com.sparta.spartadelivery.global.entity.BaseEntity;
-import com.sparta.spartadelivery.storecategory.domain.entity.StoreCategory;
 import com.sparta.spartadelivery.user.domain.entity.UserEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -36,8 +36,8 @@ public class Store extends BaseEntity {
     private UserEntity owner;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "store_category_id", nullable = false)
-    private StoreCategory storeCategory;
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "area_id", nullable = false)
@@ -61,22 +61,22 @@ public class Store extends BaseEntity {
     @Builder
     private Store(
             UserEntity owner,
-            StoreCategory storeCategory,
+            Category category,
             Area area,
             String name,
             String address,
             String phone
     ) {
         this.owner = owner;
-        this.storeCategory = storeCategory;
+        this.category = category;
         this.area = area;
         this.name = name;
         this.address = address;
         this.phone = phone;
     }
 
-    public void update(StoreCategory storeCategory, Area area, String name, String address, String phone) {
-        this.storeCategory = storeCategory;
+    public void update(Category category, Area area, String name, String address, String phone) {
+        this.category = category;
         this.area = area;
         this.name = name;
         this.address = address;

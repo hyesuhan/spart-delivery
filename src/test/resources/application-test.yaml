@@ -16,8 +16,3 @@ spring:
 jwt:
   secret: test-secret-key-for-jwt-token-provider-at-least-32bytes
   access-token-expiration: 3600000
-
-app:
-  seed:
-    store-categories:
-      enabled: false
