@@ -89,4 +89,9 @@ public class OrderService {
                 orElseThrow(() -> new AppException(OrderErrorCode.ORDER_NOT_FOUND));
     }
 
+    @Transactional
+    public void markOrderAsPaid() {
+
+    }
+
 }
