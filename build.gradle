@@ -32,6 +32,11 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     implementation 'org.springframework.boot:spring-boot-starter-security'
 
+    // QueryDSL 설정 - openfeign
+    implementation 'io.github.openfeign.querydsl:querydsl-jpa:7.1'
+    annotationProcessor 'io.github.openfeign.querydsl:querydsl-apt:7.1:jpa'
+    annotationProcessor "jakarta.annotation:jakarta.annotation-api"
+    annotationProcessor "jakarta.persistence:jakarta.persistence-api"
 
     implementation 'org.springframework.boot:spring-boot-starter-aop'
     implementation 'org.springframework.boot:spring-boot-starter-validation'

@@ -1,3 +1,4 @@
+name: sparta-delivery
 services:
   postgres:
     image: postgres:15.8

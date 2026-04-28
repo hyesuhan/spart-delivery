@@ -21,6 +21,8 @@ spring:
 logging:
   level:
     org.hibernate.SQL: debug
+    org.springframework.web: debug
+    org.springframework.security: debug
 
 jwt:
   secret: ${JWT_SECRET:please-change-this-secret-key-for-local-dev-at-least-32bytes}

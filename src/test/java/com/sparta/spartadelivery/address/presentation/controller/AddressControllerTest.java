@@ -128,7 +128,7 @@ public class AddressControllerTest {
         given(addressService.createAddress(any(AddressCreateRequest.class), anyLong()))
                 .willReturn(response);
 
-        mockMvc.perform(post("/api/addresses")
+        mockMvc.perform(post("/api/v1/addresses")
                         .with(authentication(authToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -147,7 +147,7 @@ public class AddressControllerTest {
         given(addressService.getAddress(any(UUID.class), anyLong()))
                 .willReturn(response);
 
-        mockMvc.perform(get("/api/addresses/{addressId}", addressId)
+        mockMvc.perform(get("/api/v1/addresses/{addressId}", addressId)
                         .with(authentication(authToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.alias").value("집"));
@@ -169,7 +169,7 @@ public class AddressControllerTest {
                 .willReturn(List.of(res1, res2));
 
         // when & then
-        mockMvc.perform(get("/api/addresses")
+        mockMvc.perform(get("/api/v1/addresses")
                         .with(authentication(authToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].alias").value("집"))
@@ -187,7 +187,7 @@ public class AddressControllerTest {
         given(addressService.updatedAddress(any(UUID.class), any(AddressUpdateRequest.class), anyLong()))
                 .willReturn(response);
 
-        mockMvc.perform(put("/api/addresses/{addressId}", addressId)
+        mockMvc.perform(put("/api/v1/addresses/{addressId}", addressId)
                         .with(authentication(authToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -199,7 +199,7 @@ public class AddressControllerTest {
     @Test
     @DisplayName("배송지 삭제 성공 - 204 NO_CONTENT")
     void deleteAddress_Success() throws Exception {
-        mockMvc.perform(delete("/api/addresses/{addressId}", addressId)
+        mockMvc.perform(delete("/api/v1/addresses/{addressId}", addressId)
                         .with(authentication(authToken)))
                 .andExpect(status().isNoContent())
                 .andExpect(jsonPath("$.message").value("DELETED"));
@@ -227,7 +227,7 @@ public class AddressControllerTest {
         // MASTER는 서비스에서 예외 없이 정상 처리 (void 메서드 → stub 불필요)
 
         // when & then
-        mockMvc.perform(delete("/api/addresses/{addressId}", addressId)
+        mockMvc.perform(delete("/api/v1/addresses/{addressId}", addressId)
                         .with(authentication(masterToken)))
                 .andDo(print())
                 .andExpect(status().isNoContent())
@@ -258,7 +258,7 @@ public class AddressControllerTest {
                 .when(addressService).deleteAddress(any(UUID.class), eq(999L));
 
         // when & then
-        mockMvc.perform(delete("/api/addresses/{addressId}", addressId)
+        mockMvc.perform(delete("/api/v1/addresses/{addressId}", addressId)
                         .with(authentication(otherToken)))
                 .andDo(print())
                 .andExpect(status().isForbidden());
@@ -288,7 +288,7 @@ public class AddressControllerTest {
                 .when(addressService).deleteAddress(any(UUID.class), eq(888L));
 
         // when & then
-        mockMvc.perform(delete("/api/addresses/{addressId}", addressId)
+        mockMvc.perform(delete("/api/v1/addresses/{addressId}", addressId)
                         .with(authentication(managerToken)))
                 .andDo(print())
                 .andExpect(status().isForbidden());
@@ -300,7 +300,7 @@ public class AddressControllerTest {
         given(addressService.getAddress(any(UUID.class), anyLong()))
                 .willThrow(new AppException(AddressErrorCode.ADDRESS_NOT_FOUND, "주소를 찾을 수 없습니다."));
 
-        mockMvc.perform(get("/api/addresses/{addressId}", addressId)
+        mockMvc.perform(get("/api/v1/addresses/{addressId}", addressId)
                         .with(authentication(authToken)))
                 .andExpect(status().isNotFound());
     }
@@ -313,7 +313,7 @@ public class AddressControllerTest {
         given(addressService.updatedAddress(any(UUID.class), any(AddressUpdateRequest.class), anyLong()))
                 .willThrow(new AppException(AddressErrorCode.ADDRESS_ACCESS_DENIED, "접근 권한이 없습니다."));
 
-        mockMvc.perform(put("/api/addresses/{addressId}", addressId)
+        mockMvc.perform(put("/api/v1/addresses/{addressId}", addressId)
                         .with(authentication(authToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -323,7 +323,7 @@ public class AddressControllerTest {
     @Test
     @DisplayName("기본 배송지 설정 성공 - 200 OK")
     void setDefaultAddress_Success() throws Exception {
-        mockMvc.perform(patch("/api/addresses/{addressId}/default", addressId)
+        mockMvc.perform(patch("/api/v1/addresses/{addressId}/default", addressId)
                         .with(authentication(authToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("SUCCESS"));
