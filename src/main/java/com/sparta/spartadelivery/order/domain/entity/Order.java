@@ -29,8 +29,6 @@ public class Order extends BaseEntity {
     @Column(name = "customer_id", nullable = false)
     private Long customerId;
 
-
-    // 현재 이로 대체합니다.
     @Column(name = "store_id", nullable = false)
     private UUID storeId;
 

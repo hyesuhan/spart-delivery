@@ -19,13 +19,12 @@ public class Payment extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    // 이벤트 기반으로 처리 합니다.
     @Column(nullable = false)
     private UUID orderId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private PaymentMethod paymentMethod = PaymentMethod.CARD; // 현재는 CARD만 가능
+    private PaymentMethod paymentMethod; // 현재는 CARD만 가능
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
@@ -34,13 +33,22 @@ public class Payment extends BaseEntity {
     @Column(nullable = false)
     private Integer amount;
 
-    public static Payment create(UUID orderId, Integer amount) {
+    public static Payment create(UUID orderId, PaymentMethod method, Integer amount) {
         Payment payment = new Payment();
         payment.orderId = orderId;
+        payment.paymentMethod = method;
         payment.amount = amount;
-        payment.status = PaymentStatus.PENDING;
+        payment.status = PaymentStatus.COMPLETED;
 
         return payment;
+    }
+
+    public void updateStatus(PaymentStatus status) {
+        this.status = status;
+    }
+
+    public void delete(String deletedBy) {
+        this.markDeleted(deletedBy);
     }
 
 }
