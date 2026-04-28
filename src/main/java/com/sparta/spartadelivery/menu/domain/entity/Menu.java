@@ -32,6 +32,7 @@ public class Menu extends BaseEntity {
     private String name;
 
     @Embedded
+    //@AttributeOverride(name = "price", column = @Column(name = "price", nullable = false))
     private MoneyVO price;
 
     @Column(columnDefinition = "TEXT")
