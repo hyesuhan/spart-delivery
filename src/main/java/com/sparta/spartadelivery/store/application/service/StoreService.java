@@ -19,6 +19,7 @@ import com.sparta.spartadelivery.user.domain.entity.Role;
 import com.sparta.spartadelivery.user.domain.entity.UserEntity;
 import com.sparta.spartadelivery.user.domain.repository.UserRepository;
 import java.util.Set;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -68,6 +69,17 @@ public class StoreService {
         return StoreDetailResponse.from(storeRepository.save(store));
     }
 
+    @Transactional
+    public StoreDetailResponse hideStore(UUID storeId, UserPrincipal requester) {
+        Store store = storeRepository.findByIdAndDeletedAtIsNull(storeId)
+                .orElseThrow(() -> new AppException(StoreErrorCode.STORE_NOT_FOUND));
+
+        validateHidePermission(requester, store);
+        store.hide();
+
+        return StoreDetailResponse.from(store);
+    }
+
     public StorePageResponse getStores(int page, int size, String sort) {
         String normalizedSort = normalizeSort(sort);
         Pageable pageable = createPageable(page, size, normalizedSort);
@@ -108,6 +120,16 @@ public class StoreService {
             throw new AppException(StoreErrorCode.STORE_CREATE_OWNER_ROLE_REQUIRED);
         }
         throw new AppException(StoreErrorCode.STORE_CREATE_ACCESS_DENIED);
+    }
+
+    private void validateHidePermission(UserPrincipal requester, Store store) {
+        if (requester.getRole() == Role.MANAGER || requester.getRole() == Role.MASTER) {
+            return;
+        }
+        if (requester.getRole() == Role.OWNER && store.getOwner().getId().equals(requester.getId())) {
+            return;
+        }
+        throw new AppException(StoreErrorCode.STORE_HIDE_ACCESS_DENIED);
     }
 
     private void validateAdminListPermission(UserPrincipal requester) {
