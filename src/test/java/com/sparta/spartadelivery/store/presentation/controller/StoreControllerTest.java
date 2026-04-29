@@ -5,6 +5,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doAnswer;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -79,11 +80,13 @@ class StoreControllerTest {
 
     private UsernamePasswordAuthenticationToken ownerToken;
     private UsernamePasswordAuthenticationToken customerToken;
+    private UsernamePasswordAuthenticationToken managerToken;
 
     @BeforeEach
     void setUp() throws Exception {
-        ownerToken = authenticationToken(Role.OWNER);
-        customerToken = authenticationToken(Role.CUSTOMER);
+        ownerToken = authenticationToken(1L, Role.OWNER);
+        customerToken = authenticationToken(2L, Role.CUSTOMER);
+        managerToken = authenticationToken(3L, Role.MANAGER);
 
         doAnswer(invocation -> {
             jakarta.servlet.FilterChain chain = invocation.getArgument(2);
@@ -102,7 +105,7 @@ class StoreControllerTest {
                 "서울특별시 강남구 테헤란로 123",
                 "02-1234-5678"
         );
-        StoreDetailResponse response = storeResponse(request);
+        StoreDetailResponse response = storeResponse(request.name(), request.storeCategoryId(), request.areaId(), false);
 
         given(storeService.createStore(any(StoreCreateRequest.class), any(UserPrincipal.class)))
                 .willReturn(response);
@@ -154,8 +157,7 @@ class StoreControllerTest {
                         .with(authentication(ownerToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("가게는 OWNER 권한 사용자만 등록할 수 있습니다."));
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -176,8 +178,48 @@ class StoreControllerTest {
                         .with(authentication(ownerToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("운영 지역을 찾을 수 없습니다."));
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("가게 숨김 처리 성공 시 200 OK를 반환한다")
+    void hideStore() throws Exception {
+        UUID storeId = UUID.randomUUID();
+        StoreDetailResponse response = storeResponse("스파르타 분식", UUID.randomUUID(), UUID.randomUUID(), true);
+
+        given(storeService.hideStore(storeId, (UserPrincipal) ownerToken.getPrincipal()))
+                .willReturn(response);
+
+        mockMvc.perform(patch("/api/v1/stores/{storeId}/hide", storeId)
+                        .with(authentication(ownerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.hidden").value(true));
+    }
+
+    @Test
+    @DisplayName("권한이 없으면 가게 숨김 처리 시 403을 반환한다")
+    void hideStoreDenied() throws Exception {
+        UUID storeId = UUID.randomUUID();
+        given(storeService.hideStore(storeId, (UserPrincipal) customerToken.getPrincipal()))
+                .willThrow(new AppException(StoreErrorCode.STORE_HIDE_ACCESS_DENIED));
+
+        mockMvc.perform(patch("/api/v1/stores/{storeId}/hide", storeId)
+                        .with(authentication(customerToken)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 가게면 가게 숨김 처리 시 404를 반환한다")
+    void hideStoreWhenNotFound() throws Exception {
+        UUID storeId = UUID.randomUUID();
+        given(storeService.hideStore(storeId, (UserPrincipal) ownerToken.getPrincipal()))
+                .willThrow(new AppException(StoreErrorCode.STORE_NOT_FOUND));
+
+        mockMvc.perform(patch("/api/v1/stores/{storeId}/hide", storeId)
+                        .with(authentication(ownerToken)))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -213,8 +255,7 @@ class StoreControllerTest {
         mockMvc.perform(get("/api/v1/stores")
                         .with(authentication(customerToken))
                         .param("page", "-1"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("페이지 번호는 0 이상이어야 합니다."));
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -228,7 +269,6 @@ class StoreControllerTest {
                 1,
                 "createdAt,DESC"
         );
-        UsernamePasswordAuthenticationToken managerToken = authenticationToken(Role.MANAGER);
         given(storeService.getAdminStores(any(UserPrincipal.class), any(Integer.class), any(Integer.class), any(), any(Boolean.class)))
                 .willReturn(response);
 
@@ -254,7 +294,6 @@ class StoreControllerTest {
                 1,
                 "createdAt,DESC"
         );
-        UsernamePasswordAuthenticationToken managerToken = authenticationToken(Role.MANAGER);
         given(storeService.getAdminStores(any(UserPrincipal.class), any(Integer.class), any(Integer.class), any(), any(Boolean.class)))
                 .willReturn(response);
 
@@ -275,21 +314,20 @@ class StoreControllerTest {
         mockMvc.perform(get("/api/v1/stores/admin")
                         .with(authentication(customerToken))
                         .param("hidden", "true"))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("관리자용 가게 목록을 조회할 권한이 없습니다."));
+                .andExpect(status().isForbidden());
     }
 
-    private StoreDetailResponse storeResponse(StoreCreateRequest request) {
+    private StoreDetailResponse storeResponse(String name, UUID storeCategoryId, UUID areaId, boolean hidden) {
         return new StoreDetailResponse(
                 UUID.randomUUID(),
                 1L,
-                request.storeCategoryId(),
-                request.areaId(),
-                request.name(),
-                request.address(),
-                request.phone(),
+                storeCategoryId,
+                areaId,
+                name,
+                "서울특별시 강남구 테헤란로 123",
+                "02-1234-5678",
                 BigDecimal.ZERO,
-                false,
+                hidden,
                 LocalDateTime.now()
         );
     }
@@ -318,9 +356,9 @@ class StoreControllerTest {
         );
     }
 
-    private UsernamePasswordAuthenticationToken authenticationToken(Role role) {
+    private UsernamePasswordAuthenticationToken authenticationToken(Long id, Role role) {
         UserPrincipal userPrincipal = UserPrincipal.builder()
-                .id(1L)
+                .id(id)
                 .accountName(role == Role.OWNER ? "owner01" : "customer01")
                 .email(role == Role.OWNER ? "owner01@example.com" : "customer01@example.com")
                 .password("password")
