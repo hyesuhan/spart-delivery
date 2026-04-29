@@ -37,3 +37,12 @@ app:
         - 중식
         - 일식
         - 양식
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never # DB 는 숨기고 UP/DOWN 만 보여집니다.
