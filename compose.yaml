@@ -1,6 +1,7 @@
+name: sparta-delivery
 services:
   postgres:
-    image: postgres:15.8
+    image: postgres:16.6
     container_name: sparta-delivery-postgres
     restart: unless-stopped
     environment:
@@ -12,10 +13,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U $${DB_USERNAME::-delivery-user} -d $${DB_NAME:-delivery}"]
+      interval: 5s # test 속도
       timeout: 5s
       retries: 5
 
+# 실제 운영 테스트에서는 볼륨이 필요 없습니다.
 volumes:
   postgres_data:

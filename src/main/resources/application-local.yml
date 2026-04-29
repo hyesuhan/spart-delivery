@@ -21,7 +21,28 @@ spring:
 logging:
   level:
     org.hibernate.SQL: debug
+    org.springframework.web: debug
+    org.springframework.security: debug
 
 jwt:
   secret: ${JWT_SECRET:please-change-this-secret-key-for-local-dev-at-least-32bytes}
   access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:3600000}
+
+app:
+  seed:
+    store-categories:
+      enabled: true
+      values:
+        - 한식
+        - 중식
+        - 일식
+        - 양식
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never # DB 는 숨기고 UP/DOWN 만 보여집니다.
