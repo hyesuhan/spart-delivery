@@ -1,7 +1,6 @@
 package com.sparta.spartadelivery.store.domain.repository;
 
 import com.sparta.spartadelivery.store.domain.entity.Store;
-
 import com.sparta.spartadelivery.user.domain.entity.UserEntity;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,6 +21,7 @@ public interface StoreRepository extends JpaRepository<Store, UUID> {
 
     Page<Store> findAllByDeletedAtIsNull(Pageable pageable);
 
+    Optional<Store> findByIdAndDeletedAtIsNull(UUID id);
     Optional<Store> findByIdAndDeletedAtIsNullAndIsHiddenFalse(UUID id);
 
     Optional<Store> findByOwner(UserEntity user);

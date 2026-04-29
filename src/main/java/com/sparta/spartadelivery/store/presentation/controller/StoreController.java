@@ -4,6 +4,7 @@ import com.sparta.spartadelivery.global.infrastructure.config.security.UserPrinc
 import com.sparta.spartadelivery.global.presentation.dto.ApiResponse;
 import com.sparta.spartadelivery.store.application.service.StoreService;
 import com.sparta.spartadelivery.store.presentation.dto.request.StoreCreateRequest;
+import com.sparta.spartadelivery.store.presentation.dto.request.StoreUpdateRequest;
 import com.sparta.spartadelivery.store.presentation.dto.response.StoreDetailResponse;
 import com.sparta.spartadelivery.store.presentation.dto.response.StorePageResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,6 +19,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -54,6 +56,34 @@ public class StoreController {
         StoreDetailResponse response = storeService.createStore(request, userPrincipal);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED.value(), "CREATED", response));
+    }
+
+    @Operation(
+            summary = "가게 수정 API",
+            description = """
+                    기존 가게 정보를 수정합니다.
+
+                    **요청 가능 권한**
+
+                    - OWNER (본인 가게만 가능)
+                    - MANAGER
+                    - MASTER
+
+                    **처리 정책**
+
+                    - 삭제되지 않은 가게만 수정할 수 있습니다.
+                    - 삭제되지 않은 가게 카테고리와 지역만 수정값으로 사용할 수 있습니다.
+                    - OWNER는 본인 소유 가게만 수정할 수 있습니다.
+                    """
+    )
+    @PutMapping("/{storeId}")
+    public ResponseEntity<ApiResponse<StoreDetailResponse>> updateStore(
+            @PathVariable UUID storeId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @Valid @RequestBody StoreUpdateRequest request
+    ) {
+        StoreDetailResponse response = storeService.updateStore(storeId, request, userPrincipal);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 
     @Operation(

@@ -6,6 +6,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -18,6 +19,7 @@ import com.sparta.spartadelivery.global.infrastructure.config.security.UserPrinc
 import com.sparta.spartadelivery.store.application.service.StoreService;
 import com.sparta.spartadelivery.store.exception.StoreErrorCode;
 import com.sparta.spartadelivery.store.presentation.dto.request.StoreCreateRequest;
+import com.sparta.spartadelivery.store.presentation.dto.request.StoreUpdateRequest;
 import com.sparta.spartadelivery.store.presentation.dto.response.StoreDetailResponse;
 import com.sparta.spartadelivery.store.presentation.dto.response.StoreListResponse;
 import com.sparta.spartadelivery.store.presentation.dto.response.StorePageResponse;
@@ -79,11 +81,13 @@ class StoreControllerTest {
 
     private UsernamePasswordAuthenticationToken ownerToken;
     private UsernamePasswordAuthenticationToken customerToken;
+    private UsernamePasswordAuthenticationToken managerToken;
 
     @BeforeEach
     void setUp() throws Exception {
-        ownerToken = authenticationToken(Role.OWNER);
-        customerToken = authenticationToken(Role.CUSTOMER);
+        ownerToken = authenticationToken(1L, Role.OWNER);
+        customerToken = authenticationToken(2L, Role.CUSTOMER);
+        managerToken = authenticationToken(3L, Role.MANAGER);
 
         doAnswer(invocation -> {
             jakarta.servlet.FilterChain chain = invocation.getArgument(2);
@@ -102,7 +106,7 @@ class StoreControllerTest {
                 "서울특별시 강남구 테헤란로 123",
                 "02-1234-5678"
         );
-        StoreDetailResponse response = storeResponse(request);
+        StoreDetailResponse response = storeResponse(request.name(), request.storeCategoryId(), request.areaId());
 
         given(storeService.createStore(any(StoreCreateRequest.class), any(UserPrincipal.class)))
                 .willReturn(response);
@@ -179,39 +183,93 @@ class StoreControllerTest {
     }
 
     @Test
-    @DisplayName("일반 가게 목록 조회 성공 시 200 OK를 반환한다")
-    void getStores() throws Exception {
-        StorePageResponse response = new StorePageResponse(
-                List.of(
-                        storeListResponse("스파르타 분식", "분식", "강남"),
-                        storeListResponse("스파르타 치킨", "치킨", "서초")
-                ),
-                0,
-                10,
-                2,
-                1,
-                "createdAt,DESC"
+    @DisplayName("가게 수정 성공 시 200 OK를 반환한다")
+    void updateStore() throws Exception {
+        UUID storeId = UUID.randomUUID();
+        StoreUpdateRequest request = new StoreUpdateRequest(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "스파르타 떡볶이",
+                "서울특별시 서초구 강남대로 321",
+                "02-9876-5432"
         );
-        given(storeService.getStores(0, 10, null)).willReturn(response);
+        StoreDetailResponse response = storeResponse(request.name(), request.storeCategoryId(), request.areaId());
 
-        mockMvc.perform(get("/api/v1/stores")
-                        .with(authentication(customerToken)))
+        given(storeService.updateStore(any(UUID.class), any(StoreUpdateRequest.class), any(UserPrincipal.class)))
+                .willReturn(response);
+
+        mockMvc.perform(put("/api/v1/stores/{storeId}", storeId)
+                        .with(authentication(ownerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
                 .andExpect(jsonPath("$.message").value("SUCCESS"))
-                .andExpect(jsonPath("$.data.content.length()").value(2));
+                .andExpect(jsonPath("$.data.name").value("스파르타 떡볶이"));
     }
 
     @Test
-    @DisplayName("일반 가게 목록 조회 시 잘못된 페이지 번호면 400을 반환한다")
-    void getStoresWithInvalidPageNumber() throws Exception {
-        given(storeService.getStores(-1, 10, null))
-                .willThrow(new AppException(StoreErrorCode.STORE_LIST_INVALID_PAGE_NUMBER));
+    @DisplayName("가게 수정 요청값이 유효하지 않으면 400을 반환한다")
+    void updateStoreWithInvalidRequest() throws Exception {
+        UUID storeId = UUID.randomUUID();
+        StoreUpdateRequest request = new StoreUpdateRequest(
+                null,
+                UUID.randomUUID(),
+                "",
+                "",
+                "02-9876-5432"
+        );
 
-        mockMvc.perform(get("/api/v1/stores")
+        mockMvc.perform(put("/api/v1/stores/{storeId}", storeId)
+                        .with(authentication(ownerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    @DisplayName("권한이 없으면 가게 수정 시 403을 반환한다")
+    void updateStoreDenied() throws Exception {
+        UUID storeId = UUID.randomUUID();
+        StoreUpdateRequest request = new StoreUpdateRequest(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "스파르타 떡볶이",
+                "서울특별시 서초구 강남대로 321",
+                "02-9876-5432"
+        );
+
+        given(storeService.updateStore(any(UUID.class), any(StoreUpdateRequest.class), any(UserPrincipal.class)))
+                .willThrow(new AppException(StoreErrorCode.STORE_UPDATE_ACCESS_DENIED));
+
+        mockMvc.perform(put("/api/v1/stores/{storeId}", storeId)
                         .with(authentication(customerToken))
-                        .param("page", "-1"))
-                .andExpect(status().isBadRequest());
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 가게면 가게 수정 시 404를 반환한다")
+    void updateStoreWhenNotFound() throws Exception {
+        UUID storeId = UUID.randomUUID();
+        StoreUpdateRequest request = new StoreUpdateRequest(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "스파르타 떡볶이",
+                "서울특별시 서초구 강남대로 321",
+                "02-9876-5432"
+        );
+
+        given(storeService.updateStore(any(UUID.class), any(StoreUpdateRequest.class), any(UserPrincipal.class)))
+                .willThrow(new AppException(StoreErrorCode.STORE_NOT_FOUND));
+
+        mockMvc.perform(put("/api/v1/stores/{storeId}", storeId)
+                        .with(authentication(ownerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -254,6 +312,42 @@ class StoreControllerTest {
     }
 
     @Test
+    @DisplayName("일반 가게 목록 조회 성공 시 200 OK를 반환한다")
+    void getStores() throws Exception {
+        StorePageResponse response = new StorePageResponse(
+                List.of(
+                        storeListResponse("스파르타 분식", "분식", "강남"),
+                        storeListResponse("스파르타 치킨", "치킨", "서초")
+                ),
+                0,
+                10,
+                2,
+                1,
+                "createdAt,DESC"
+        );
+        given(storeService.getStores(0, 10, null)).willReturn(response);
+
+        mockMvc.perform(get("/api/v1/stores")
+                        .with(authentication(customerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.content.length()").value(2));
+    }
+
+    @Test
+    @DisplayName("일반 가게 목록 조회 시 잘못된 페이지 번호면 400을 반환한다")
+    void getStoresWithInvalidPageNumber() throws Exception {
+        given(storeService.getStores(-1, 10, null))
+                .willThrow(new AppException(StoreErrorCode.STORE_LIST_INVALID_PAGE_NUMBER));
+
+        mockMvc.perform(get("/api/v1/stores")
+                        .with(authentication(customerToken))
+                        .param("page", "-1"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("관리자용 가게 목록 조회 시 hidden이 false면 숨김 제외 결과를 반환한다")
     void getAdminStoresWithoutHidden() throws Exception {
         StorePageResponse response = new StorePageResponse(
@@ -264,7 +358,6 @@ class StoreControllerTest {
                 1,
                 "createdAt,DESC"
         );
-        UsernamePasswordAuthenticationToken managerToken = authenticationToken(Role.MANAGER);
         given(storeService.getAdminStores(any(UserPrincipal.class), any(Integer.class), any(Integer.class), any(), any(Boolean.class)))
                 .willReturn(response);
 
@@ -290,7 +383,6 @@ class StoreControllerTest {
                 1,
                 "createdAt,DESC"
         );
-        UsernamePasswordAuthenticationToken managerToken = authenticationToken(Role.MANAGER);
         given(storeService.getAdminStores(any(UserPrincipal.class), any(Integer.class), any(Integer.class), any(), any(Boolean.class)))
                 .willReturn(response);
 
@@ -314,15 +406,15 @@ class StoreControllerTest {
                 .andExpect(status().isForbidden());
     }
 
-    private StoreDetailResponse storeResponse(StoreCreateRequest request) {
+    private StoreDetailResponse storeResponse(String name, UUID storeCategoryId, UUID areaId) {
         return new StoreDetailResponse(
                 UUID.randomUUID(),
                 1L,
-                request.storeCategoryId(),
-                request.areaId(),
-                request.name(),
-                request.address(),
-                request.phone(),
+                storeCategoryId,
+                areaId,
+                name,
+                "서울특별시 강남구 테헤란로 123",
+                "02-1234-5678",
                 BigDecimal.ZERO,
                 false,
                 LocalDateTime.now()
@@ -353,9 +445,9 @@ class StoreControllerTest {
         );
     }
 
-    private UsernamePasswordAuthenticationToken authenticationToken(Role role) {
+    private UsernamePasswordAuthenticationToken authenticationToken(Long id, Role role) {
         UserPrincipal userPrincipal = UserPrincipal.builder()
-                .id(1L)
+                .id(id)
                 .accountName(role == Role.OWNER ? "owner01" : "customer01")
                 .email(role == Role.OWNER ? "owner01@example.com" : "customer01@example.com")
                 .password("password")
