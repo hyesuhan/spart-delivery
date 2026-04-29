@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doAnswer;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -18,9 +19,12 @@ import com.sparta.spartadelivery.store.application.service.StoreService;
 import com.sparta.spartadelivery.store.exception.StoreErrorCode;
 import com.sparta.spartadelivery.store.presentation.dto.request.StoreCreateRequest;
 import com.sparta.spartadelivery.store.presentation.dto.response.StoreDetailResponse;
+import com.sparta.spartadelivery.store.presentation.dto.response.StoreListResponse;
+import com.sparta.spartadelivery.store.presentation.dto.response.StorePageResponse;
 import com.sparta.spartadelivery.user.domain.entity.Role;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -74,10 +78,12 @@ class StoreControllerTest {
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     private UsernamePasswordAuthenticationToken ownerToken;
+    private UsernamePasswordAuthenticationToken customerToken;
 
     @BeforeEach
     void setUp() throws Exception {
         ownerToken = authenticationToken(Role.OWNER);
+        customerToken = authenticationToken(Role.CUSTOMER);
 
         doAnswer(invocation -> {
             jakarta.servlet.FilterChain chain = invocation.getArgument(2);
@@ -174,6 +180,105 @@ class StoreControllerTest {
                 .andExpect(jsonPath("$.message").value("운영 지역을 찾을 수 없습니다."));
     }
 
+    @Test
+    @DisplayName("일반 가게 목록 조회 성공 시 200 OK를 반환한다")
+    void getStores() throws Exception {
+        StorePageResponse response = new StorePageResponse(
+                List.of(
+                        storeListResponse("스파르타 분식", "분식", "강남"),
+                        storeListResponse("스파르타 치킨", "치킨", "서초")
+                ),
+                0,
+                10,
+                2,
+                1,
+                "createdAt,DESC"
+        );
+        given(storeService.getStores(0, 10, null)).willReturn(response);
+
+        mockMvc.perform(get("/api/v1/stores")
+                        .with(authentication(customerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.content.length()").value(2));
+    }
+
+    @Test
+    @DisplayName("일반 가게 목록 조회 시 잘못된 페이지 번호면 400을 반환한다")
+    void getStoresWithInvalidPageNumber() throws Exception {
+        given(storeService.getStores(-1, 10, null))
+                .willThrow(new AppException(StoreErrorCode.STORE_LIST_INVALID_PAGE_NUMBER));
+
+        mockMvc.perform(get("/api/v1/stores")
+                        .with(authentication(customerToken))
+                        .param("page", "-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("페이지 번호는 0 이상이어야 합니다."));
+    }
+
+    @Test
+    @DisplayName("관리자용 가게 목록 조회 시 hidden이 false면 숨김 제외 결과를 반환한다")
+    void getAdminStoresWithoutHidden() throws Exception {
+        StorePageResponse response = new StorePageResponse(
+                List.of(storeListResponse("스파르타 분식", "분식", "강남")),
+                0,
+                10,
+                1,
+                1,
+                "createdAt,DESC"
+        );
+        UsernamePasswordAuthenticationToken managerToken = authenticationToken(Role.MANAGER);
+        given(storeService.getAdminStores(any(UserPrincipal.class), any(Integer.class), any(Integer.class), any(), any(Boolean.class)))
+                .willReturn(response);
+
+        mockMvc.perform(get("/api/v1/stores/admin")
+                        .with(authentication(managerToken))
+                        .param("hidden", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()").value(1))
+                .andExpect(jsonPath("$.data.content[0].hidden").value(false));
+    }
+
+    @Test
+    @DisplayName("관리자용 가게 목록 조회 시 hidden이 true면 숨김 포함 결과를 반환한다")
+    void getAdminStoresWithHidden() throws Exception {
+        StorePageResponse response = new StorePageResponse(
+                List.of(
+                        storeListResponse("스파르타 분식", "분식", "강남"),
+                        hiddenStoreListResponse("스파르타 치킨", "치킨", "서초")
+                ),
+                0,
+                10,
+                2,
+                1,
+                "createdAt,DESC"
+        );
+        UsernamePasswordAuthenticationToken managerToken = authenticationToken(Role.MANAGER);
+        given(storeService.getAdminStores(any(UserPrincipal.class), any(Integer.class), any(Integer.class), any(), any(Boolean.class)))
+                .willReturn(response);
+
+        mockMvc.perform(get("/api/v1/stores/admin")
+                        .with(authentication(managerToken))
+                        .param("hidden", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()").value(2))
+                .andExpect(jsonPath("$.data.content[1].hidden").value(true));
+    }
+
+    @Test
+    @DisplayName("관리자 권한이 없으면 관리자용 가게 목록 조회 시 403을 반환한다")
+    void getAdminStoresByCustomerDenied() throws Exception {
+        given(storeService.getAdminStores(any(UserPrincipal.class), any(Integer.class), any(Integer.class), any(), any(Boolean.class)))
+                .willThrow(new AppException(StoreErrorCode.STORE_ADMIN_LIST_ACCESS_DENIED));
+
+        mockMvc.perform(get("/api/v1/stores/admin")
+                        .with(authentication(customerToken))
+                        .param("hidden", "true"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("관리자용 가게 목록을 조회할 권한이 없습니다."));
+    }
+
     private StoreDetailResponse storeResponse(StoreCreateRequest request) {
         return new StoreDetailResponse(
                 UUID.randomUUID(),
@@ -189,13 +294,37 @@ class StoreControllerTest {
         );
     }
 
+    private StoreListResponse storeListResponse(String name, String storeCategoryName, String areaName) {
+        return new StoreListResponse(
+                UUID.randomUUID(),
+                storeCategoryName,
+                areaName,
+                name,
+                BigDecimal.ZERO,
+                false,
+                LocalDateTime.now()
+        );
+    }
+
+    private StoreListResponse hiddenStoreListResponse(String name, String storeCategoryName, String areaName) {
+        return new StoreListResponse(
+                UUID.randomUUID(),
+                storeCategoryName,
+                areaName,
+                name,
+                BigDecimal.ZERO,
+                true,
+                LocalDateTime.now()
+        );
+    }
+
     private UsernamePasswordAuthenticationToken authenticationToken(Role role) {
         UserPrincipal userPrincipal = UserPrincipal.builder()
                 .id(1L)
-                .accountName("owner01")
-                .email("owner01@example.com")
+                .accountName(role == Role.OWNER ? "owner01" : "customer01")
+                .email(role == Role.OWNER ? "owner01@example.com" : "customer01@example.com")
                 .password("password")
-                .nickname("점주01")
+                .nickname(role == Role.OWNER ? "점주01" : "고객01")
                 .role(role)
                 .build();
         return new UsernamePasswordAuthenticationToken(
