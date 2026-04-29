@@ -122,7 +122,7 @@ class StoreServiceTest {
     }
 
     @Test
-    @DisplayName("요청자 사용자가 없으면 가게를 등록할 수 없다")
+    @DisplayName("요청 사용자가 없으면 가게를 등록할 수 없다")
     void createStoreWhenOwnerNotFound() {
         StoreCreateRequest request = new StoreCreateRequest(
                 UUID.randomUUID(),
@@ -217,6 +217,33 @@ class StoreServiceTest {
         assertThat(response.content()).isEmpty();
         assertThat(response.totalElements()).isZero();
         assertThat(response.totalPages()).isZero();
+    }
+
+    @Test
+    @DisplayName("공개 가게 상세 정보를 조회한다")
+    void getStore() {
+        UUID storeId = UUID.randomUUID();
+        Store store = store("스파르타 분식", "분식", "강남");
+        when(storeRepository.findByIdAndDeletedAtIsNullAndIsHiddenFalse(storeId))
+                .thenReturn(Optional.of(store));
+
+        var response = storeService.getStore(storeId);
+
+        assertThat(response.name()).isEqualTo("스파르타 분식");
+        assertThat(response.hidden()).isFalse();
+    }
+
+    @Test
+    @DisplayName("공개 가게가 아니면 상세 조회할 수 없다")
+    void getStoreWhenNotFound() {
+        UUID storeId = UUID.randomUUID();
+        when(storeRepository.findByIdAndDeletedAtIsNullAndIsHiddenFalse(storeId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> storeService.getStore(storeId))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(StoreErrorCode.STORE_NOT_FOUND);
     }
 
     @Test

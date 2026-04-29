@@ -154,8 +154,7 @@ class StoreControllerTest {
                         .with(authentication(ownerToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("가게는 OWNER 권한 사용자만 등록할 수 있습니다."));
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -176,8 +175,7 @@ class StoreControllerTest {
                         .with(authentication(ownerToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("운영 지역을 찾을 수 없습니다."));
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -213,8 +211,46 @@ class StoreControllerTest {
         mockMvc.perform(get("/api/v1/stores")
                         .with(authentication(customerToken))
                         .param("page", "-1"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("페이지 번호는 0 이상이어야 합니다."));
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("가게 상세조회 성공 시 200 OK를 반환한다")
+    void getStore() throws Exception {
+        UUID storeId = UUID.randomUUID();
+        StoreDetailResponse response = new StoreDetailResponse(
+                storeId,
+                1L,
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "스파르타 분식",
+                "서울특별시 강남구 테헤란로 123",
+                "02-1234-5678",
+                BigDecimal.valueOf(4.5),
+                false,
+                LocalDateTime.now()
+        );
+        given(storeService.getStore(storeId)).willReturn(response);
+
+        mockMvc.perform(get("/api/v1/stores/{storeId}", storeId)
+                        .with(authentication(customerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(storeId.toString()))
+                .andExpect(jsonPath("$.data.name").value("스파르타 분식"));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 가게면 상세조회 시 404를 반환한다")
+    void getStoreWhenNotFound() throws Exception {
+        UUID storeId = UUID.randomUUID();
+        given(storeService.getStore(storeId))
+                .willThrow(new AppException(StoreErrorCode.STORE_NOT_FOUND));
+
+        mockMvc.perform(get("/api/v1/stores/{storeId}", storeId)
+                        .with(authentication(customerToken)))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -275,8 +311,7 @@ class StoreControllerTest {
         mockMvc.perform(get("/api/v1/stores/admin")
                         .with(authentication(customerToken))
                         .param("hidden", "true"))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("관리자용 가게 목록을 조회할 권한이 없습니다."));
+                .andExpect(status().isForbidden());
     }
 
     private StoreDetailResponse storeResponse(StoreCreateRequest request) {

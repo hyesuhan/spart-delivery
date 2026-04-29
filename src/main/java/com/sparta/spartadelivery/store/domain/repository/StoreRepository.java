@@ -22,5 +22,7 @@ public interface StoreRepository extends JpaRepository<Store, UUID> {
 
     Page<Store> findAllByDeletedAtIsNull(Pageable pageable);
 
+    Optional<Store> findByIdAndDeletedAtIsNullAndIsHiddenFalse(UUID id);
+
     Optional<Store> findByOwner(UserEntity user);
 }

@@ -19,6 +19,7 @@ import com.sparta.spartadelivery.user.domain.entity.Role;
 import com.sparta.spartadelivery.user.domain.entity.UserEntity;
 import com.sparta.spartadelivery.user.domain.repository.UserRepository;
 import java.util.Set;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -76,6 +77,13 @@ public class StoreService {
                 storeRepository.findAllPublicStores(pageable),
                 normalizedSort
         );
+    }
+
+    public StoreDetailResponse getStore(UUID storeId) {
+        Store store = storeRepository.findByIdAndDeletedAtIsNullAndIsHiddenFalse(storeId)
+                .orElseThrow(() -> new AppException(StoreErrorCode.STORE_NOT_FOUND));
+
+        return StoreDetailResponse.from(store);
     }
 
     public StorePageResponse getAdminStores(
