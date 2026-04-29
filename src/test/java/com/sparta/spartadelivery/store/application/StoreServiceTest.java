@@ -18,6 +18,7 @@ import com.sparta.spartadelivery.store.domain.entity.Store;
 import com.sparta.spartadelivery.store.domain.repository.StoreRepository;
 import com.sparta.spartadelivery.store.exception.StoreErrorCode;
 import com.sparta.spartadelivery.store.presentation.dto.request.StoreCreateRequest;
+import com.sparta.spartadelivery.store.presentation.dto.request.StoreUpdateRequest;
 import com.sparta.spartadelivery.storecategory.domain.entity.StoreCategory;
 import com.sparta.spartadelivery.storecategory.domain.repository.StoreCategoryRepository;
 import com.sparta.spartadelivery.storecategory.exception.StoreCategoryErrorCode;
@@ -189,6 +190,106 @@ class StoreServiceTest {
     }
 
     @Test
+    @DisplayName("점주는 본인 가게를 수정할 수 있다")
+    void updateStoreByOwner() {
+        UUID storeId = UUID.randomUUID();
+        UUID storeCategoryId = UUID.randomUUID();
+        UUID areaId = UUID.randomUUID();
+        Store store = store(storeId, 1L, "이전 가게", "분식", "강남");
+        StoreUpdateRequest request = new StoreUpdateRequest(
+                storeCategoryId,
+                areaId,
+                " 스파르타 떡볶이 ",
+                " 서울특별시 서초구 강남대로 321 ",
+                " 02-9876-5432 "
+        );
+
+        when(storeRepository.findByIdAndDeletedAtIsNull(storeId)).thenReturn(Optional.of(store));
+        when(storeCategoryRepository.findByIdAndDeletedAtIsNull(storeCategoryId))
+                .thenReturn(Optional.of(storeCategory(storeCategoryId, "분식")));
+        when(areaRepository.findByIdAndDeletedAtIsNull(areaId))
+                .thenReturn(Optional.of(area(areaId, "서초")));
+
+        var response = storeService.updateStore(storeId, request, principal(1L, Role.OWNER));
+
+        assertThat(store.getName()).isEqualTo("스파르타 떡볶이");
+        assertThat(store.getAddress()).isEqualTo("서울특별시 서초구 강남대로 321");
+        assertThat(store.getPhone()).isEqualTo("02-9876-5432");
+        assertThat(response.name()).isEqualTo("스파르타 떡볶이");
+        assertThat(response.storeCategoryId()).isEqualTo(storeCategoryId);
+        assertThat(response.areaId()).isEqualTo(areaId);
+    }
+
+    @Test
+    @DisplayName("MANAGER는 가게를 수정할 수 있다")
+    void updateStoreByManager() {
+        UUID storeId = UUID.randomUUID();
+        UUID storeCategoryId = UUID.randomUUID();
+        UUID areaId = UUID.randomUUID();
+        Store store = store(storeId, 1L, "이전 가게", "분식", "강남");
+        StoreUpdateRequest request = new StoreUpdateRequest(
+                storeCategoryId,
+                areaId,
+                "스파르타 떡볶이",
+                "서울특별시 서초구 강남대로 321",
+                "02-9876-5432"
+        );
+
+        when(storeRepository.findByIdAndDeletedAtIsNull(storeId)).thenReturn(Optional.of(store));
+        when(storeCategoryRepository.findByIdAndDeletedAtIsNull(storeCategoryId))
+                .thenReturn(Optional.of(storeCategory(storeCategoryId, "분식")));
+        when(areaRepository.findByIdAndDeletedAtIsNull(areaId))
+                .thenReturn(Optional.of(area(areaId, "서초")));
+
+        var response = storeService.updateStore(storeId, request, principal(2L, Role.MANAGER));
+
+        assertThat(response.name()).isEqualTo("스파르타 떡볶이");
+        assertThat(store.getOwner().getId()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("본인 가게가 아닌 OWNER는 수정할 수 없다")
+    void updateStoreByAnotherOwnerDenied() {
+        UUID storeId = UUID.randomUUID();
+        Store store = store(storeId, 1L, "이전 가게", "분식", "강남");
+        StoreUpdateRequest request = new StoreUpdateRequest(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "스파르타 떡볶이",
+                "서울특별시 서초구 강남대로 321",
+                "02-9876-5432"
+        );
+
+        when(storeRepository.findByIdAndDeletedAtIsNull(storeId)).thenReturn(Optional.of(store));
+
+        assertThatThrownBy(() -> storeService.updateStore(storeId, request, principal(2L, Role.OWNER)))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(StoreErrorCode.STORE_UPDATE_ACCESS_DENIED);
+    }
+
+    @Test
+    @DisplayName("CUSTOMER는 가게를 수정할 수 없다")
+    void updateStoreByCustomerDenied() {
+        UUID storeId = UUID.randomUUID();
+        Store store = store(storeId, 1L, "이전 가게", "분식", "강남");
+        StoreUpdateRequest request = new StoreUpdateRequest(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "스파르타 떡볶이",
+                "서울특별시 서초구 강남대로 321",
+                "02-9876-5432"
+        );
+
+        when(storeRepository.findByIdAndDeletedAtIsNull(storeId)).thenReturn(Optional.of(store));
+
+        assertThatThrownBy(() -> storeService.updateStore(storeId, request, principal(3L, Role.CUSTOMER)))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode")
+                .isEqualTo(StoreErrorCode.STORE_UPDATE_ACCESS_DENIED);
+    }
+
+    @Test
     @DisplayName("점주는 본인 가게를 숨김 처리할 수 있다")
     void hideStoreByOwner() {
         UUID storeId = UUID.randomUUID();
@@ -241,12 +342,27 @@ class StoreServiceTest {
     }
 
     @Test
-    @DisplayName("수정 대상 가게가 없으면 숨김 처리할 수 없다")
-    void hideStoreWhenNotFound() {
+    @DisplayName("공개 가게 상세 정보를 조회한다")
+    void getStore() {
         UUID storeId = UUID.randomUUID();
-        when(storeRepository.findByIdAndDeletedAtIsNull(storeId)).thenReturn(Optional.empty());
+        Store store = store(storeId, 1L, "스파르타 분식", "분식", "강남");
+        when(storeRepository.findByIdAndDeletedAtIsNullAndIsHiddenFalse(storeId))
+                .thenReturn(Optional.of(store));
 
-        assertThatThrownBy(() -> storeService.hideStore(storeId, principal(1L, Role.OWNER)))
+        var response = storeService.getStore(storeId);
+
+        assertThat(response.name()).isEqualTo("스파르타 분식");
+        assertThat(response.hidden()).isFalse();
+    }
+
+    @Test
+    @DisplayName("공개 가게가 아니면 상세 조회할 수 없다")
+    void getStoreWhenNotFound() {
+        UUID storeId = UUID.randomUUID();
+        when(storeRepository.findByIdAndDeletedAtIsNullAndIsHiddenFalse(storeId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> storeService.getStore(storeId))
                 .isInstanceOf(AppException.class)
                 .extracting("errorCode")
                 .isEqualTo(StoreErrorCode.STORE_NOT_FOUND);

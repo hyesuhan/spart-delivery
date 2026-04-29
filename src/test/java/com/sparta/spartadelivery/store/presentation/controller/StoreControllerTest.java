@@ -7,6 +7,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -19,6 +20,7 @@ import com.sparta.spartadelivery.global.infrastructure.config.security.UserPrinc
 import com.sparta.spartadelivery.store.application.service.StoreService;
 import com.sparta.spartadelivery.store.exception.StoreErrorCode;
 import com.sparta.spartadelivery.store.presentation.dto.request.StoreCreateRequest;
+import com.sparta.spartadelivery.store.presentation.dto.request.StoreUpdateRequest;
 import com.sparta.spartadelivery.store.presentation.dto.response.StoreDetailResponse;
 import com.sparta.spartadelivery.store.presentation.dto.response.StoreListResponse;
 import com.sparta.spartadelivery.store.presentation.dto.response.StorePageResponse;
@@ -182,12 +184,80 @@ class StoreControllerTest {
     }
 
     @Test
+    @DisplayName("가게 수정 성공 시 200 OK를 반환한다")
+    void updateStore() throws Exception {
+        UUID storeId = UUID.randomUUID();
+        StoreUpdateRequest request = new StoreUpdateRequest(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "스파르타 떡볶이",
+                "서울특별시 서초구 강남대로 321",
+                "02-9876-5432"
+        );
+        StoreDetailResponse response = storeResponse(request.name(), request.storeCategoryId(), request.areaId(), false);
+
+        given(storeService.updateStore(any(UUID.class), any(StoreUpdateRequest.class), any(UserPrincipal.class)))
+                .willReturn(response);
+
+        mockMvc.perform(put("/api/v1/stores/{storeId}", storeId)
+                        .with(authentication(ownerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.name").value("스파르타 떡볶이"));
+    }
+
+    @Test
+    @DisplayName("가게 수정 요청값이 유효하지 않으면 400을 반환한다")
+    void updateStoreWithInvalidRequest() throws Exception {
+        UUID storeId = UUID.randomUUID();
+        StoreUpdateRequest request = new StoreUpdateRequest(
+                null,
+                UUID.randomUUID(),
+                "",
+                "",
+                "02-9876-5432"
+        );
+
+        mockMvc.perform(put("/api/v1/stores/{storeId}", storeId)
+                        .with(authentication(ownerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    @DisplayName("권한이 없으면 가게 수정 시 403을 반환한다")
+    void updateStoreDenied() throws Exception {
+        UUID storeId = UUID.randomUUID();
+        StoreUpdateRequest request = new StoreUpdateRequest(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "스파르타 떡볶이",
+                "서울특별시 서초구 강남대로 321",
+                "02-9876-5432"
+        );
+
+        given(storeService.updateStore(any(UUID.class), any(StoreUpdateRequest.class), any(UserPrincipal.class)))
+                .willThrow(new AppException(StoreErrorCode.STORE_UPDATE_ACCESS_DENIED));
+
+        mockMvc.perform(put("/api/v1/stores/{storeId}", storeId)
+                        .with(authentication(customerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @DisplayName("가게 숨김 처리 성공 시 200 OK를 반환한다")
     void hideStore() throws Exception {
         UUID storeId = UUID.randomUUID();
         StoreDetailResponse response = storeResponse("스파르타 분식", UUID.randomUUID(), UUID.randomUUID(), true);
 
-        given(storeService.hideStore(storeId, (UserPrincipal) ownerToken.getPrincipal()))
+        given(storeService.hideStore(any(UUID.class), any(UserPrincipal.class)))
                 .willReturn(response);
 
         mockMvc.perform(patch("/api/v1/stores/{storeId}/hide", storeId)
@@ -202,7 +272,7 @@ class StoreControllerTest {
     @DisplayName("권한이 없으면 가게 숨김 처리 시 403을 반환한다")
     void hideStoreDenied() throws Exception {
         UUID storeId = UUID.randomUUID();
-        given(storeService.hideStore(storeId, (UserPrincipal) customerToken.getPrincipal()))
+        given(storeService.hideStore(any(UUID.class), any(UserPrincipal.class)))
                 .willThrow(new AppException(StoreErrorCode.STORE_HIDE_ACCESS_DENIED));
 
         mockMvc.perform(patch("/api/v1/stores/{storeId}/hide", storeId)
@@ -211,14 +281,41 @@ class StoreControllerTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 가게면 가게 숨김 처리 시 404를 반환한다")
-    void hideStoreWhenNotFound() throws Exception {
+    @DisplayName("가게 상세조회 성공 시 200 OK를 반환한다")
+    void getStore() throws Exception {
         UUID storeId = UUID.randomUUID();
-        given(storeService.hideStore(storeId, (UserPrincipal) ownerToken.getPrincipal()))
+        StoreDetailResponse response = new StoreDetailResponse(
+                storeId,
+                1L,
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "스파르타 분식",
+                "서울특별시 강남구 테헤란로 123",
+                "02-1234-5678",
+                BigDecimal.valueOf(4.5),
+                false,
+                LocalDateTime.now()
+        );
+        given(storeService.getStore(storeId)).willReturn(response);
+
+        mockMvc.perform(get("/api/v1/stores/{storeId}", storeId)
+                        .with(authentication(customerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(storeId.toString()))
+                .andExpect(jsonPath("$.data.name").value("스파르타 분식"));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 가게면 상세조회 시 404를 반환한다")
+    void getStoreWhenNotFound() throws Exception {
+        UUID storeId = UUID.randomUUID();
+        given(storeService.getStore(storeId))
                 .willThrow(new AppException(StoreErrorCode.STORE_NOT_FOUND));
 
-        mockMvc.perform(patch("/api/v1/stores/{storeId}/hide", storeId)
-                        .with(authentication(ownerToken)))
+        mockMvc.perform(get("/api/v1/stores/{storeId}", storeId)
+                        .with(authentication(customerToken)))
                 .andExpect(status().isNotFound());
     }
 

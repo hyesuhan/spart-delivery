@@ -10,13 +10,13 @@ import com.sparta.spartadelivery.store.domain.entity.Store;
 import com.sparta.spartadelivery.store.domain.repository.StoreRepository;
 import com.sparta.spartadelivery.store.exception.StoreErrorCode;
 import com.sparta.spartadelivery.store.presentation.dto.request.StoreCreateRequest;
+import com.sparta.spartadelivery.store.presentation.dto.request.StoreUpdateRequest;
 import com.sparta.spartadelivery.store.presentation.dto.response.StoreDetailResponse;
 import com.sparta.spartadelivery.store.presentation.dto.response.StorePageResponse;
 import com.sparta.spartadelivery.storecategory.domain.entity.StoreCategory;
 import com.sparta.spartadelivery.storecategory.domain.repository.StoreCategoryRepository;
 import com.sparta.spartadelivery.storecategory.exception.StoreCategoryErrorCode;
 import com.sparta.spartadelivery.user.domain.entity.Role;
-import com.sparta.spartadelivery.user.domain.entity.UserEntity;
 import com.sparta.spartadelivery.user.domain.repository.UserRepository;
 import java.util.Set;
 import java.util.UUID;
@@ -50,7 +50,7 @@ public class StoreService {
     public StoreDetailResponse createStore(StoreCreateRequest request, UserPrincipal requester) {
         validateCreatePermission(requester);
 
-        UserEntity owner = userRepository.findByIdAndDeletedAtIsNull(requester.getId())
+        var owner = userRepository.findByIdAndDeletedAtIsNull(requester.getId())
                 .orElseThrow(() -> new AppException(AuthErrorCode.USER_NOT_FOUND));
         StoreCategory storeCategory = storeCategoryRepository.findByIdAndDeletedAtIsNull(request.storeCategoryId())
                 .orElseThrow(() -> new AppException(StoreCategoryErrorCode.STORE_CATEGORY_NOT_FOUND));
@@ -67,6 +67,29 @@ public class StoreService {
                 .build();
 
         return StoreDetailResponse.from(storeRepository.save(store));
+    }
+
+    @Transactional
+    public StoreDetailResponse updateStore(UUID storeId, StoreUpdateRequest request, UserPrincipal requester) {
+        Store store = storeRepository.findByIdAndDeletedAtIsNull(storeId)
+                .orElseThrow(() -> new AppException(StoreErrorCode.STORE_NOT_FOUND));
+
+        validateUpdatePermission(requester, store);
+
+        StoreCategory storeCategory = storeCategoryRepository.findByIdAndDeletedAtIsNull(request.storeCategoryId())
+                .orElseThrow(() -> new AppException(StoreCategoryErrorCode.STORE_CATEGORY_NOT_FOUND));
+        Area area = areaRepository.findByIdAndDeletedAtIsNull(request.areaId())
+                .orElseThrow(() -> new AppException(AreaErrorCode.AREA_NOT_FOUND));
+
+        store.update(
+                storeCategory,
+                area,
+                request.name().strip(),
+                request.address().strip(),
+                normalizePhone(request.phone())
+        );
+
+        return StoreDetailResponse.from(store);
     }
 
     @Transactional
@@ -88,6 +111,13 @@ public class StoreService {
                 storeRepository.findAllPublicStores(pageable),
                 normalizedSort
         );
+    }
+
+    public StoreDetailResponse getStore(UUID storeId) {
+        Store store = storeRepository.findByIdAndDeletedAtIsNullAndIsHiddenFalse(storeId)
+                .orElseThrow(() -> new AppException(StoreErrorCode.STORE_NOT_FOUND));
+
+        return StoreDetailResponse.from(store);
     }
 
     public StorePageResponse getAdminStores(
@@ -120,6 +150,16 @@ public class StoreService {
             throw new AppException(StoreErrorCode.STORE_CREATE_OWNER_ROLE_REQUIRED);
         }
         throw new AppException(StoreErrorCode.STORE_CREATE_ACCESS_DENIED);
+    }
+
+    private void validateUpdatePermission(UserPrincipal requester, Store store) {
+        if (requester.getRole() == Role.MANAGER || requester.getRole() == Role.MASTER) {
+            return;
+        }
+        if (requester.getRole() == Role.OWNER && store.getOwner().getId().equals(requester.getId())) {
+            return;
+        }
+        throw new AppException(StoreErrorCode.STORE_UPDATE_ACCESS_DENIED);
     }
 
     private void validateHidePermission(UserPrincipal requester, Store store) {

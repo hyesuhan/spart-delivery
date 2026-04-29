@@ -4,6 +4,7 @@ import com.sparta.spartadelivery.global.infrastructure.config.security.UserPrinc
 import com.sparta.spartadelivery.global.presentation.dto.ApiResponse;
 import com.sparta.spartadelivery.store.application.service.StoreService;
 import com.sparta.spartadelivery.store.presentation.dto.request.StoreCreateRequest;
+import com.sparta.spartadelivery.store.presentation.dto.request.StoreUpdateRequest;
 import com.sparta.spartadelivery.store.presentation.dto.response.StoreDetailResponse;
 import com.sparta.spartadelivery.store.presentation.dto.response.StorePageResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -41,6 +43,17 @@ public class StoreController {
         StoreDetailResponse response = storeService.createStore(request, userPrincipal);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(HttpStatus.CREATED.value(), "CREATED", response));
+    }
+
+    @Operation(summary = "가게 수정 API")
+    @PutMapping("/{storeId}")
+    public ResponseEntity<ApiResponse<StoreDetailResponse>> updateStore(
+            @PathVariable UUID storeId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @Valid @RequestBody StoreUpdateRequest request
+    ) {
+        StoreDetailResponse response = storeService.updateStore(storeId, request, userPrincipal);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 
     @Operation(summary = "가게 숨김 처리 API")
@@ -67,6 +80,15 @@ public class StoreController {
             @RequestParam(required = false) String sort
     ) {
         StorePageResponse response = storeService.getStores(page, size, sort);
+        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
+    }
+
+    @Operation(summary = "가게 상세 조회 API")
+    @GetMapping("/{storeId}")
+    public ResponseEntity<ApiResponse<StoreDetailResponse>> getStore(
+            @PathVariable UUID storeId
+    ) {
+        StoreDetailResponse response = storeService.getStore(storeId);
         return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), response));
     }
 
