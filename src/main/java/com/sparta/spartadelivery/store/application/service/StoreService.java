@@ -103,6 +103,15 @@ public class StoreService {
         return StoreDetailResponse.from(store);
     }
 
+    @Transactional
+    public void deleteStore(UUID storeId, UserPrincipal requester) {
+        Store store = storeRepository.findByIdAndDeletedAtIsNull(storeId)
+                .orElseThrow(() -> new AppException(StoreErrorCode.STORE_NOT_FOUND));
+
+        validateDeletePermission(requester, store);
+        store.markDeleted(requester.getAccountName());
+    }
+
     public StorePageResponse getStores(int page, int size, String sort) {
         String normalizedSort = normalizeSort(sort);
         Pageable pageable = createPageable(page, size, normalizedSort);
@@ -170,6 +179,16 @@ public class StoreService {
             return;
         }
         throw new AppException(StoreErrorCode.STORE_HIDE_ACCESS_DENIED);
+    }
+
+    private void validateDeletePermission(UserPrincipal requester, Store store) {
+        if (requester.getRole() == Role.MASTER) {
+            return;
+        }
+        if (requester.getRole() == Role.OWNER && store.getOwner().getId().equals(requester.getId())) {
+            return;
+        }
+        throw new AppException(StoreErrorCode.STORE_DELETE_ACCESS_DENIED);
     }
 
     private void validateAdminListPermission(UserPrincipal requester) {

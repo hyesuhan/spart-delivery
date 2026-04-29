@@ -2,8 +2,10 @@ package com.sparta.spartadelivery.store.presentation.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.doAnswer;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -86,9 +88,9 @@ class StoreControllerTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        ownerToken = authenticationToken(1L, Role.OWNER);
-        customerToken = authenticationToken(2L, Role.CUSTOMER);
-        managerToken = authenticationToken(3L, Role.MANAGER);
+        ownerToken = authenticationToken(1L, Role.OWNER, "owner01");
+        customerToken = authenticationToken(2L, Role.CUSTOMER, "customer01");
+        managerToken = authenticationToken(3L, Role.MANAGER, "manager01");
 
         doAnswer(invocation -> {
             jakarta.servlet.FilterChain chain = invocation.getArgument(2);
@@ -104,7 +106,7 @@ class StoreControllerTest {
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 "스파르타 분식",
-                "서울특별시 강남구 테헤란로 123",
+                "서울 강남구 테헤란로 123",
                 "02-1234-5678"
         );
         StoreDetailResponse response = storeResponse(request.name(), request.storeCategoryId(), request.areaId(), false);
@@ -148,7 +150,7 @@ class StoreControllerTest {
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 "스파르타 분식",
-                "서울특별시 강남구 테헤란로 123",
+                "서울 강남구 테헤란로 123",
                 "02-1234-5678"
         );
 
@@ -169,7 +171,7 @@ class StoreControllerTest {
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 "스파르타 분식",
-                "서울특별시 강남구 테헤란로 123",
+                "서울 강남구 테헤란로 123",
                 "02-1234-5678"
         );
 
@@ -191,7 +193,7 @@ class StoreControllerTest {
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 "스파르타 떡볶이",
-                "서울특별시 서초구 강남대로 321",
+                "서울 송파구 올림픽로 321",
                 "02-9876-5432"
         );
         StoreDetailResponse response = storeResponse(request.name(), request.storeCategoryId(), request.areaId(), false);
@@ -237,7 +239,7 @@ class StoreControllerTest {
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 "스파르타 떡볶이",
-                "서울특별시 서초구 강남대로 321",
+                "서울 송파구 올림픽로 321",
                 "02-9876-5432"
         );
 
@@ -281,7 +283,44 @@ class StoreControllerTest {
     }
 
     @Test
-    @DisplayName("가게 상세조회 성공 시 200 OK를 반환한다")
+    @DisplayName("가게 삭제 성공 시 200 OK를 반환한다")
+    void deleteStore() throws Exception {
+        UUID storeId = UUID.randomUUID();
+
+        mockMvc.perform(delete("/api/v1/stores/{storeId}", storeId)
+                        .with(authentication(ownerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("권한이 없으면 가게 삭제 시 403을 반환한다")
+    void deleteStoreDenied() throws Exception {
+        UUID storeId = UUID.randomUUID();
+        willThrow(new AppException(StoreErrorCode.STORE_DELETE_ACCESS_DENIED))
+                .given(storeService).deleteStore(any(UUID.class), any(UserPrincipal.class));
+
+        mockMvc.perform(delete("/api/v1/stores/{storeId}", storeId)
+                        .with(authentication(customerToken)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("삭제 대상 가게가 없으면 404를 반환한다")
+    void deleteStoreWhenNotFound() throws Exception {
+        UUID storeId = UUID.randomUUID();
+        willThrow(new AppException(StoreErrorCode.STORE_NOT_FOUND))
+                .given(storeService).deleteStore(any(UUID.class), any(UserPrincipal.class));
+
+        mockMvc.perform(delete("/api/v1/stores/{storeId}", storeId)
+                        .with(authentication(ownerToken)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("가게 상세 조회 성공 시 200 OK를 반환한다")
     void getStore() throws Exception {
         UUID storeId = UUID.randomUUID();
         StoreDetailResponse response = new StoreDetailResponse(
@@ -290,7 +329,7 @@ class StoreControllerTest {
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 "스파르타 분식",
-                "서울특별시 강남구 테헤란로 123",
+                "서울 강남구 테헤란로 123",
                 "02-1234-5678",
                 BigDecimal.valueOf(4.5),
                 false,
@@ -308,7 +347,7 @@ class StoreControllerTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 가게면 상세조회 시 404를 반환한다")
+    @DisplayName("존재하지 않는 가게면 상세 조회 시 404를 반환한다")
     void getStoreWhenNotFound() throws Exception {
         UUID storeId = UUID.randomUUID();
         given(storeService.getStore(storeId))
@@ -325,7 +364,7 @@ class StoreControllerTest {
         StorePageResponse response = new StorePageResponse(
                 List.of(
                         storeListResponse("스파르타 분식", "분식", "강남"),
-                        storeListResponse("스파르타 치킨", "치킨", "서초")
+                        storeListResponse("스파르타 치킨", "치킨", "송파")
                 ),
                 0,
                 10,
@@ -356,7 +395,7 @@ class StoreControllerTest {
     }
 
     @Test
-    @DisplayName("관리자용 가게 목록 조회 시 hidden이 false면 숨김 제외 결과를 반환한다")
+    @DisplayName("관리자 가게 목록 조회 시 hidden=false면 숨김 제외 결과를 반환한다")
     void getAdminStoresWithoutHidden() throws Exception {
         StorePageResponse response = new StorePageResponse(
                 List.of(storeListResponse("스파르타 분식", "분식", "강남")),
@@ -378,12 +417,12 @@ class StoreControllerTest {
     }
 
     @Test
-    @DisplayName("관리자용 가게 목록 조회 시 hidden이 true면 숨김 포함 결과를 반환한다")
+    @DisplayName("관리자 가게 목록 조회 시 hidden=true면 숨김 포함 결과를 반환한다")
     void getAdminStoresWithHidden() throws Exception {
         StorePageResponse response = new StorePageResponse(
                 List.of(
                         storeListResponse("스파르타 분식", "분식", "강남"),
-                        hiddenStoreListResponse("스파르타 치킨", "치킨", "서초")
+                        hiddenStoreListResponse("스파르타 치킨", "치킨", "송파")
                 ),
                 0,
                 10,
@@ -403,7 +442,7 @@ class StoreControllerTest {
     }
 
     @Test
-    @DisplayName("관리자 권한이 없으면 관리자용 가게 목록 조회 시 403을 반환한다")
+    @DisplayName("관리자 권한이 없으면 관리자 가게 목록 조회 시 403을 반환한다")
     void getAdminStoresByCustomerDenied() throws Exception {
         given(storeService.getAdminStores(any(UserPrincipal.class), any(Integer.class), any(Integer.class), any(), any(Boolean.class)))
                 .willThrow(new AppException(StoreErrorCode.STORE_ADMIN_LIST_ACCESS_DENIED));
@@ -421,7 +460,7 @@ class StoreControllerTest {
                 storeCategoryId,
                 areaId,
                 name,
-                "서울특별시 강남구 테헤란로 123",
+                "서울 강남구 테헤란로 123",
                 "02-1234-5678",
                 BigDecimal.ZERO,
                 hidden,
@@ -453,13 +492,13 @@ class StoreControllerTest {
         );
     }
 
-    private UsernamePasswordAuthenticationToken authenticationToken(Long id, Role role) {
+    private UsernamePasswordAuthenticationToken authenticationToken(Long id, Role role, String accountName) {
         UserPrincipal userPrincipal = UserPrincipal.builder()
                 .id(id)
-                .accountName(role == Role.OWNER ? "owner01" : "customer01")
-                .email(role == Role.OWNER ? "owner01@example.com" : "customer01@example.com")
+                .accountName(accountName)
+                .email(accountName + "@example.com")
                 .password("password")
-                .nickname(role == Role.OWNER ? "점주01" : "고객01")
+                .nickname(accountName)
                 .role(role)
                 .build();
         return new UsernamePasswordAuthenticationToken(
