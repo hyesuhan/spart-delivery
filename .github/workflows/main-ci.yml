@@ -5,8 +5,11 @@ name: Main CI Build And integration Test
 # 트리거 설정 : develop -> main 에 Pr 또는 업데이트 시 실행
 on:
   pull_request:
-  branches:
-    - main
+    branches:
+      - main
+  push:
+    branches:
+      - main
 
 # Job 을 정의합니다.
 jobs:
@@ -17,28 +20,30 @@ jobs:
     steps:
       # 레포지토리의 코드를 러너 환경으로 가져옵니다.
       - name: Checkout Source Code
-      uses: actions/checkout@4
+        uses: actions/checkout@v4
 
       # Docker 를 미리 빌드해 미리 문제를 확인합니다.
       - name: Build Docker Image
-      run: |
-        docker build -t spring-app:test .
+        run: |
+          docker build -t spring-app:test .
         # 태그를 지정합니다. 지금은 spring-app:test라는 이름을 붙였습니다.
         # Docker compose 환경에서 통합테스트를 합니다.
-        - name: Run Integration Tests
+
+      - name: Run Integration Tests
         run: |
-          # test container 가 실패 시 CI도 실패
+        # test container 가 실패 시 CI도 실패
           docker-compose -f docker-compose.test.yml up --abort-on-container-exit --exit-code-from test-runner
         
         # CI 성공 시 CD 를 트리거 해야 합니다.
         # CD 워크 플로우의 workflow-run 에서 감지되므로
         # 여기서는 성공 상태를 로그만 남기고 이를 트리거로 쓰려합니다.
-        - name: CI Success Log
+
+      - name: CI Success Log
         if: success()
         run: echo "CI build and tests passed. Triggering CD next"
-        
+
         # 실패 시 슬랙에 알림이 가야 합니다. failure() 함수를 사용해 실행
-        - name: Notify Slack on Failure
+      - name: Notify Slack on Failure
         if: failure()
         uses: sarisia/actions-status-discord@v1
         with:
